@@ -115,9 +115,7 @@ button.accent {
     width: 100%;
     max-width: 500px;
     display: inline-block;
-    margin-top: 42px;
     vertical-align: middle;
-    position: relative;
     padding: 35px 55px 35px;
     min-height: 250px;
     position: absolute;
@@ -156,7 +154,7 @@ button.accent {
     margin: 0;
     overflow: auto;
     overflow-y: scroll;
-    padding: 0 20px 0px 20px;
+    padding: 0 20px 0 20px;
     height: calc(100% - 150px);
 }
 
@@ -210,11 +208,10 @@ button.accent {
 }
 
 #chat-page .chat-message g-card {
-    position: absolute;
     width: 32px;
     height: 42px;
     overflow: hidden;
-    left: 130px;
+    left: 50px;
     display: inline-flex;
     vertical-align: middle;
     font-size: 18px;

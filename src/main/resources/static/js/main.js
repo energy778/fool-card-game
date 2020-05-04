@@ -48,7 +48,7 @@ function onConnected(options) {
     stompClient.send("/app/chat.addUser",
         {},
         JSON.stringify({sender: username, type: 'JOIN'})
-    )
+    );
 
     connectingElement.classList.add('hidden');
 }
@@ -139,42 +139,9 @@ function onMessageReceived(payload) {
             cElementContainer.appendChild(cardElement);
             messageElement.appendChild(cElementContainer);
 
-            messageElement.appendChild(cardElement);
+            // TODO: можно сделать так, чтобы карты выводились на следующей строке после ника
 
         }
-
-        /*
-хардкод для отображения одной карты
-
-        var cardElement = document.createElement('g-card');
-
-//         var cardText = document.createTextNode('K♥');
-
-        var cardElementText1 = document.createElement('div');
-        var cardText1 = document.createTextNode('♥');
-        cardElementText1.appendChild(cardText1);
-
-        var cardElementText2 = document.createElement('div');
-        var cardText2 = document.createTextNode('10');
-        cardElementText2.appendChild(cardText2);
-
-        var cardElementText3 = document.createElement('div');
-        var cardText3 = document.createTextNode('♥');
-        cardElementText3.appendChild(cardText3);
-
-        cardElement.style['color'] = '#f00';
-
-        cardElement.appendChild(cardElementText1);
-        cardElement.appendChild(cardElementText2);
-        cardElement.appendChild(cardElementText3);
-
-        // контейнер для карт
-        var cElementContainer = document.createElement('span');
-        cElementContainer.appendChild(cardElement);
-        messageElement.appendChild(cElementContainer);
-
-        messageElement.appendChild(cardElement);
-        */
 
     } else {
 
@@ -187,6 +154,7 @@ function onMessageReceived(payload) {
 
     messageArea.appendChild(messageElement);
     messageArea.scrollTop = messageArea.scrollHeight;
+
 }
 
 
