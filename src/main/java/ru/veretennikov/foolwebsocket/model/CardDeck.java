@@ -4,11 +4,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
+import java.util.LinkedList;
 
-@Setter
 @Getter
+@Setter
 @NoArgsConstructor
-public class GameContent {
-    private List<Card> cards;
+public class CardDeck {
+    private LinkedList<Card> cards;
+    private int trumpSuit;
 }

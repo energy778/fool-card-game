@@ -8,7 +8,7 @@ import lombok.Setter;
 @Setter
 @RequiredArgsConstructor
 public class Card {
-    String num;
-    int suit;
-    boolean trump;
+    private Rank rank;
+    private int suit;
+    private boolean trump;
 }

@@ -119,7 +119,7 @@ function onMessageReceived(payload) {
             cardElementText1.appendChild(cardText1);
 
             var cardElementText2 = document.createElement('div');
-            var cardText2 = document.createTextNode(card.num);
+            var cardText2 = document.createTextNode(card.rank);
             cardElementText2.appendChild(cardText2);
 
             var cardElementText3 = document.createElement('div');
