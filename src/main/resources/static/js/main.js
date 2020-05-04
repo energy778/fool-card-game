@@ -16,6 +16,14 @@ var colors = [
     '#ffc107', '#ff85af', '#FF9800', '#39bbb0'
 ];
 
+var colorsSuit = [
+    '#f00', '#000', '#000', '#f00'
+];
+
+var suits = [
+    '♥', '♠', '♣', '♦'
+];
+
 function connect(event) {
     username = document.querySelector('#name').value.trim();
 
@@ -70,6 +78,7 @@ function sendMessage(event) {
 
 
 function onMessageReceived(payload) {
+
     var message = JSON.parse(payload.body);
 
     var messageElement = document.createElement('li');
@@ -80,14 +89,13 @@ function onMessageReceived(payload) {
     } else if (message.type === 'LEAVE') {
         messageElement.classList.add('event-message');
         message.content = message.sender + ' left!';
-    } else {
+    } else if (message.type === 'CHAT') {
         messageElement.classList.add('chat-message');
 
         var avatarElement = document.createElement('i');
         var avatarText = document.createTextNode(message.sender[0]);
         avatarElement.appendChild(avatarText);
         avatarElement.style['background-color'] = getAvatarColor(message.sender);
-
         messageElement.appendChild(avatarElement);
 
         var usernameElement = document.createElement('span');
@@ -96,11 +104,86 @@ function onMessageReceived(payload) {
         messageElement.appendChild(usernameElement);
     }
 
-    var textElement = document.createElement('p');
-    var messageText = document.createTextNode(message.content);
-    textElement.appendChild(messageText);
+    if (message.type === 'CHAT') {
 
-    messageElement.appendChild(textElement);
+        for (var i = 0; i < message.content.cards.length; i++){
+
+            var card = message.content.cards[i];
+            var suitIndex = card.suit;
+            var suit = suits[suitIndex];
+
+            var cardElement = document.createElement('g-card');
+
+            var cardElementText1 = document.createElement('div');
+            var cardText1 = document.createTextNode(suit);
+            cardElementText1.appendChild(cardText1);
+
+            var cardElementText2 = document.createElement('div');
+            var cardText2 = document.createTextNode(card.num);
+            cardElementText2.appendChild(cardText2);
+
+            var cardElementText3 = document.createElement('div');
+            var cardText3 = document.createTextNode(suit);
+            cardElementText3.appendChild(cardText3);
+
+            cardElement.style['color'] = colorsSuit[suitIndex];
+            if (card.trump)
+                cardElement.style['font-weight'] = 'bold';
+
+            cardElement.appendChild(cardElementText1);
+            cardElement.appendChild(cardElementText2);
+            cardElement.appendChild(cardElementText3);
+
+            // контейнер для карт
+            var cElementContainer = document.createElement('span');
+            cElementContainer.appendChild(cardElement);
+            messageElement.appendChild(cElementContainer);
+
+            messageElement.appendChild(cardElement);
+
+        }
+
+        /*
+хардкод для отображения одной карты
+
+        var cardElement = document.createElement('g-card');
+
+//         var cardText = document.createTextNode('K♥');
+
+        var cardElementText1 = document.createElement('div');
+        var cardText1 = document.createTextNode('♥');
+        cardElementText1.appendChild(cardText1);
+
+        var cardElementText2 = document.createElement('div');
+        var cardText2 = document.createTextNode('10');
+        cardElementText2.appendChild(cardText2);
+
+        var cardElementText3 = document.createElement('div');
+        var cardText3 = document.createTextNode('♥');
+        cardElementText3.appendChild(cardText3);
+
+        cardElement.style['color'] = '#f00';
+
+        cardElement.appendChild(cardElementText1);
+        cardElement.appendChild(cardElementText2);
+        cardElement.appendChild(cardElementText3);
+
+        // контейнер для карт
+        var cElementContainer = document.createElement('span');
+        cElementContainer.appendChild(cardElement);
+        messageElement.appendChild(cElementContainer);
+
+        messageElement.appendChild(cardElement);
+        */
+
+    } else {
+
+        var textElement = document.createElement('p');
+        var messageText = document.createTextNode(message.content);
+        textElement.appendChild(messageText);
+        messageElement.appendChild(textElement);
+
+    }
 
     messageArea.appendChild(messageElement);
     messageArea.scrollTop = messageArea.scrollHeight;

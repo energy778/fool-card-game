@@ -1,16 +1,14 @@
 package ru.veretennikov.foolwebsocket.model;
 
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Setter
 @Getter
-@NoArgsConstructor
-public class ChatMessage {
+public class ChatMessageSimple {
 
     private MessageType type;
-    private GameContent content;
+    private String content;
     private String sender;
 
     public enum MessageType {

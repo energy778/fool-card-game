@@ -209,6 +209,42 @@ button.accent {
     text-transform: uppercase;
 }
 
+#chat-page .chat-message g-card {
+    position: absolute;
+    width: 32px;
+    height: 42px;
+    overflow: hidden;
+    left: 130px;
+    display: inline-flex;
+    vertical-align: middle;
+    font-size: 18px;
+    line-height: 42px;
+    background-color: #ffffef;
+    text-align: center;
+    border-radius: 11%;
+    border: 1px solid #d6e9cb;
+    font-style: normal;
+    text-transform: uppercase;
+
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+#chat-page .chat-message g-card > div:first-child {
+    position: absolute;
+    font-size: 12px;
+    top: -14px;
+    left: 2px;
+}
+
+#chat-page .chat-message g-card > div:last-child {
+    position: absolute;
+    font-size: 12px;
+    bottom: -14px;
+    right: 2px;
+}
+
 #chat-page .chat-message span {
     color: #333;
     font-weight: 600;
