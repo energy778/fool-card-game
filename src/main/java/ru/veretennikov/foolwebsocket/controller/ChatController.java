@@ -38,7 +38,7 @@ public class ChatController {
         newMessage.setContent(content);
 
         // TODO: 004 04.05.20 починить сраный логгер
-        logger.debug("Осталось в колоде: {}", cardDeck.getCards().size());
+        log.debug("Осталось в колоде: {}", cardDeck.getCards().size());
 
         return newMessage;
 
