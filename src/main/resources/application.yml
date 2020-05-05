@@ -3,3 +3,5 @@ server:
 
 logging:
   level.*: debug
+  file:
+    name: out/log.txt

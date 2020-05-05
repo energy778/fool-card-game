@@ -1,4 +1,4 @@
-package ru.veretennikov.foolwebsocket.model;
+package ru.veretennikov.foolwebsocket.core.model;
 
 import lombok.Getter;
 import lombok.Setter;

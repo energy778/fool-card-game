@@ -10,6 +10,7 @@ import java.util.*;
 public class CardDeck {
 
     private LinkedList<Card> cards;
+    private Card trump;
     private int trumpSuit;
 
     public CardDeck() {
@@ -18,33 +19,34 @@ public class CardDeck {
     }
 
     public boolean isEmpty() {
-        if (cards == null)
-            return true;
+//        if (cards == null)
+//            return true;
         return cards.isEmpty();
     }
 
     public Card pop() {
-        if (cards == null)
-            return null;
+//        if (cards == null)
+//            return null;
         return cards.pop();
     }
 
     public int size() {
-        if (cards == null)
-            return 0;
+//        if (cards == null)
+//            return 0;
         return cards.size();
     }
 
 
     public List<Card> getSomeCards(int size) {
 
+        // TODO: 005 05.05.20 временная заглушка для отладки
         if (size == 0)
             size = 4;
 
         Random random = new Random();
 
         List<Card> cards = new ArrayList<>();
-        for (int i = 0; i < random.nextInt(size)+1; i++) {
+        for (int i = 0; i < (random.nextInt(size)+1); i++) {
             if (this.isEmpty())
                 break;
             Card curCard = this.pop();
@@ -52,10 +54,21 @@ public class CardDeck {
             cards.add(curCard);
         }
 
+        // TODO: 005 05.05.20 добавить опцию сортировки по разным критериям
         cards.sort(Comparator.comparing(Card::getRank));
 
         return cards;
 
+    }
+
+//    козырь. карта берется сверху и после демонстрации кладется под колоду
+//    для разных игр может использоваться по-разному. в некоторых играх и вовсе отсутствовать. но пока пусть так
+    public void pickTrump() {
+        Card trump = cards.pop();
+        cards.addLast(trump);
+        this.trump = trump;
+        this.trumpSuit = trump.getSuit();
+        cards.forEach(card -> card.setTrump(card.getSuit() == this.trumpSuit));
     }
 
 }
