@@ -4,7 +4,6 @@ import ru.veretennikov.foolwebsocket.model.Card;
 import ru.veretennikov.foolwebsocket.model.CardDeck;
 import ru.veretennikov.foolwebsocket.model.Rank;
 
-import java.util.LinkedList;
 import java.util.Random;
 
 import static java.util.Collections.shuffle;
@@ -15,10 +14,9 @@ public class CardGenerate {
     private static int[] suits = new int[]{0,1,2,3};
     private static Rank[] ranks = Rank.values();
 
-    public static CardDeck getCardDeck() {
+    public static CardDeck newCardDeck() {
 
         CardDeck cardDeck = new CardDeck();
-        cardDeck.setCards(new LinkedList<>());
 
         for (Rank rank : ranks) {
             for (int suit : suits) {
