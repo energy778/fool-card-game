@@ -5,9 +5,10 @@ import org.springframework.stereotype.Service;
 import ru.veretennikov.foolwebsocket.common.util.CardGenerate;
 import ru.veretennikov.foolwebsocket.model.CardDeck;
 import ru.veretennikov.foolwebsocket.model.GameContent;
+import ru.veretennikov.foolwebsocket.model.User;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -15,7 +16,7 @@ public class DurakGameServiceImpl implements GameService {
 
     // TODO: 005 05.05.20 может быть имеет смысл избавиться от content-а и размещать все объекты прямо здесь
     private CardDeck cardDeck = CardGenerate.newCardDeck();
-    private final List<String> users = new ArrayList<>();
+    private final Map<String, User> users = new HashMap();
 
     @Override
     public GameContent getContent() {
@@ -39,18 +40,21 @@ public class DurakGameServiceImpl implements GameService {
     }
 
     @Override
-    public void addUser(String username) {
-        users.add(username);
+    public void addUser(String username, String sessionId) {
+        User newUser = new User(sessionId, username);
+        users.put(sessionId, newUser);
         System.out.println(String.format("%s вошел в игру", username));
         System.out.println(String.format("Список всех игроков: %s", users));
     }
 
     @Override
-    public void removeUser(String username) {
+    public String removeUser(String userId) {
         // TODO: 006 06.05.20 заканчивать игру, если пользователь был игроком, а не наблюдателем
-        users.remove(username);
+        User user = users.remove(userId);
+        String username = user.getName();
         System.out.println(String.format("%s вышел из игры", username));
         System.out.println(String.format("Список всех игроков: %s", users));
+        return username;
     }
 
     @Override

@@ -22,6 +22,8 @@ public class GameController {
     @SendTo("/topic/public")
     public ChatMessage sendMessage(@Payload ChatMessageSimple message) {
 
+        // TODO: 006 06.05.20 фильтровать по типу сообщению. например для LEAVE - просто возврат сообщения на клиент
+
 //        генерация новой колоды. пока что через "особое" сообщение по текущему же адресу (только при условии, что в колоде уже не осталось карт)
 //        но потом сделать по кнопке и отдельным методом контроллера
         gameService.checkNewGame(message.getContent());
@@ -43,7 +45,7 @@ public class GameController {
         // Add username in web socket session
         String sender = chatMessage.getSender();
         headerAccessor.getSessionAttributes().put("username", sender);
-        gameService.addUser(sender);
+        gameService.addUser(sender, headerAccessor.getSessionId());
 
         return chatMessage;
 

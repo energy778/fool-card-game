@@ -29,12 +29,12 @@ public class WebSocketEventListener {
 
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
 
-        String username = (String) headerAccessor.getSessionAttributes().get("username");
+        String userId = headerAccessor.getSessionId();
 
-        if (username != null) {
+        if (userId != null) {
 
+            String username = gameService.removeUser(userId);
             log.info("User Disconnected : " + username);
-            gameService.removeUser(username);
 
             ChatMessage chatMessage = new ChatMessage();
             chatMessage.setType(ChatMessage.MessageType.LEAVE);
