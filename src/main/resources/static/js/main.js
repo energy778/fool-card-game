@@ -10,6 +10,7 @@ var connectingElement = document.querySelector('.connecting');
 
 var stompClient = null;
 var username = null;
+var sessionId = null;
 
 var colors = [
     '#2196F3', '#32c787', '#00BCD4', '#ff5652',
@@ -33,8 +34,11 @@ function connect(event) {
 
         var socket = new SockJS('/ws');
         stompClient = Stomp.over(socket);
+        stompClient.connect({}, function(frame) {
+            sessionId = socket.sessionId;
+            onConnected(frame);
+        }, onError);
 
-        stompClient.connect({}, onConnected, onError);
     }
     event.preventDefault();
 }
