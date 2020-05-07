@@ -3,7 +3,10 @@ package ru.veretennikov.foolwebsocket.model;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -39,14 +42,8 @@ public class CardDeck {
 
     public List<Card> getSomeCards(int size) {
 
-        // TODO: 005 05.05.20 временная заглушка для отладки
-        if (size == 0)
-            size = 4;
-
-        Random random = new Random();
-
         List<Card> cards = new ArrayList<>();
-        for (int i = 0; i < (random.nextInt(size)+1); i++) {
+        for (int i = 0; i < size; i++) {
             if (this.isEmpty())
                 break;
             Card curCard = this.pop();

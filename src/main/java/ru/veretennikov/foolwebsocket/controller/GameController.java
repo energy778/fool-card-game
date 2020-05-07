@@ -8,7 +8,7 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
 import ru.veretennikov.foolwebsocket.core.model.ChatMessage;
-import ru.veretennikov.foolwebsocket.core.model.ChatMessageSimple;
+import ru.veretennikov.foolwebsocket.model.GameContent;
 import ru.veretennikov.foolwebsocket.service.GameService;
 
 @Slf4j
@@ -20,21 +20,12 @@ public class GameController {
 
     @MessageMapping("/chat.sendMessage")
     @SendTo("/topic/public")
-    public ChatMessage sendMessage(@Payload ChatMessageSimple message) {
+    public ChatMessage sendMessage(@Payload ChatMessage message, SimpMessageHeaderAccessor headerAccessor) {
 
-        // TODO: 006 06.05.20 фильтровать по типу сообщению. например для LEAVE - просто возврат сообщения на клиент
+        GameContent gameContent = gameService.processingCommand(message.getContent(), headerAccessor.getSessionId());
+        message.setGameContent(gameContent);
 
-//        генерация новой колоды. пока что через "особое" сообщение по текущему же адресу (только при условии, что в колоде уже не осталось карт)
-//        но потом сделать по кнопке и отдельным методом контроллера
-        gameService.checkNewGame(message.getContent());
-
-        ChatMessage newMessage = new ChatMessage();
-        newMessage.setSender(message.getSender());
-        newMessage.setType(ChatMessage.MessageType.CHAT);
-//        String enteredCard = message.getContent();        надо генерировать карту на основе присланной информации
-        newMessage.setContent(gameService.getContent());
-
-        return newMessage;
+        return message;
 
     }
 

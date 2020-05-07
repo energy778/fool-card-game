@@ -11,7 +11,8 @@ import ru.veretennikov.foolwebsocket.model.GameContent;
 public class ChatMessage {
 
     private MessageType type;
-    private GameContent content;
+    private GameContent gameContent;
+    private String content;
     private String sender;
 
     public enum MessageType {

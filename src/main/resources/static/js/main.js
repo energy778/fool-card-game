@@ -106,40 +106,53 @@ function onMessageReceived(payload) {
 
     if (message.type === 'CHAT') {
 
-        for (var i = 0; i < message.content.cards.length; i++){
+        if (message.gameContent.message === null){
 
-            var card = message.content.cards[i];
-            var suitIndex = card.suit;
-            var suit = suits[suitIndex];
+            let cards = message.gameContent.cards;
+            // alert(message.message);
+            for (var i = 0; i < message.content.cards.length; i++){
 
-            var cardElement = document.createElement('g-card');
+                var card = cards[i];
+                var suitIndex = card.suit;
+                var suit = suits[suitIndex];
 
-            var cardElementText1 = document.createElement('div');
-            var cardText1 = document.createTextNode(suit);
-            cardElementText1.appendChild(cardText1);
+                var cardElement = document.createElement('g-card');
 
-            var cardElementText2 = document.createElement('div');
-            var cardText2 = document.createTextNode(card.rank);
-            cardElementText2.appendChild(cardText2);
+                var cardElementText1 = document.createElement('div');
+                var cardText1 = document.createTextNode(suit);
+                cardElementText1.appendChild(cardText1);
 
-            var cardElementText3 = document.createElement('div');
-            var cardText3 = document.createTextNode(suit);
-            cardElementText3.appendChild(cardText3);
+                var cardElementText2 = document.createElement('div');
+                var cardText2 = document.createTextNode(card.rank);
+                cardElementText2.appendChild(cardText2);
 
-            cardElement.style['color'] = colorsSuit[suitIndex];
-            if (card.trump)
-                cardElement.style['font-weight'] = 'bold';
+                var cardElementText3 = document.createElement('div');
+                var cardText3 = document.createTextNode(suit);
+                cardElementText3.appendChild(cardText3);
 
-            cardElement.appendChild(cardElementText1);
-            cardElement.appendChild(cardElementText2);
-            cardElement.appendChild(cardElementText3);
+                cardElement.style['color'] = colorsSuit[suitIndex];
+                if (card.trump)
+                    cardElement.style['font-weight'] = 'bold';
 
-            // контейнер для карт
-            var cElementContainer = document.createElement('span');
-            cElementContainer.appendChild(cardElement);
-            messageElement.appendChild(cElementContainer);
+                cardElement.appendChild(cardElementText1);
+                cardElement.appendChild(cardElementText2);
+                cardElement.appendChild(cardElementText3);
 
-            // TODO: можно сделать так, чтобы карты выводились на следующей строке после ника
+                // контейнер для карт
+                var cElementContainer = document.createElement('span');
+                cElementContainer.appendChild(cardElement);
+                messageElement.appendChild(cElementContainer);
+
+                // TODO: можно сделать так, чтобы карты выводились на следующей строке после ника
+
+            }
+
+        } else {
+
+            var textElement = document.createElement('p');
+            var messageText = document.createTextNode(message.gameContent.message);
+            textElement.appendChild(messageText);
+            messageElement.appendChild(textElement);
 
         }
 

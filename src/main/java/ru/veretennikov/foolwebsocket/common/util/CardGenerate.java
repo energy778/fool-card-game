@@ -28,7 +28,7 @@ public class CardGenerate {
 
         shuffle(cardDeck.getCards());
 
-        // TODO: 006 06.05.20 логичнее вызывать не в генерации колоды, а после раздачи карт игрокам
+//        тут небольшая особенность. козырь определяется сразу, т.е. ДО раздачи карт игрокам
         cardDeck.pickTrump();
 
         return cardDeck;

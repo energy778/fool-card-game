@@ -3,9 +3,7 @@ package ru.veretennikov.foolwebsocket.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.veretennikov.foolwebsocket.common.util.CardGenerate;
-import ru.veretennikov.foolwebsocket.model.CardDeck;
-import ru.veretennikov.foolwebsocket.model.GameContent;
-import ru.veretennikov.foolwebsocket.model.User;
+import ru.veretennikov.foolwebsocket.model.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,54 +12,149 @@ import java.util.Map;
 @Service
 public class DurakGameServiceImpl implements GameService {
 
-    // TODO: 005 05.05.20 может быть имеет смысл избавиться от content-а и размещать все объекты прямо здесь
-    private CardDeck cardDeck = CardGenerate.newCardDeck();
+    private final int MAX_NUM_CARD_ON_HAND = 6;
+
+    private final int MIN_NUM_PLAYERS = 2;
+    private final int MAX_NUM_PLAYERS = 6;
+
+    private boolean gameStarted;
+    private CardDeck cardDeck;
+
+    private CardDeck initCardDeck() {
+        return CardGenerate.newCardDeck();
+    }
+
     private final Map<String, User> users = new HashMap();
 
-    @Override
-    public GameContent getContent() {
+    /**
+     * получение реального игрового контента по пользователю
+     **/
+    private GameContent getCurrentGameContent(String userId) {
 
         GameContent content = new GameContent();
 
-//        нужна информация о картах на руках пользователя
-        content.setCards(cardDeck.getSomeCards(4));     // тупо берем произвольное количество карт (от 1 до 4)
+        // TODO: 007 07.05.20 добавить проверки
+        content.setCards(users.get(userId).getCards());
+
 //        количество оставшихся в колоде карт
         content.setCardDeckSize(cardDeck.size());
+
 //        козырь
         content.setTrumpSuit(cardDeck.getTrumpSuit());
+
 //        иногда - козырная карта (в самом начале новой игры - чтобы отобразить ее один раз на игровом поле)
         content.setTrump(cardDeck.getTrump());
 
         // TODO: 006 06.05.20 на время отладки
 //        log.debug("Возвращаемый контент: {}", content);
         System.out.println(String.format("Возвращаемый контент: %s", content));
+
         return content;
 
     }
 
     @Override
     public void addUser(String username, String sessionId) {
+
         User newUser = new User(sessionId, username);
+        newUser.setRole(UserRole.GUEST);
         users.put(sessionId, newUser);
+
         System.out.println(String.format("%s вошел в игру", username));
         System.out.println(String.format("Список всех игроков: %s", users));
+
     }
 
     @Override
     public String removeUser(String userId) {
+
         // TODO: 006 06.05.20 заканчивать игру, если пользователь был игроком, а не наблюдателем
         User user = users.remove(userId);
         String username = user.getName();
+
         System.out.println(String.format("%s вышел из игры", username));
         System.out.println(String.format("Список всех игроков: %s", users));
+
         return username;
+
     }
 
     @Override
-    public void checkNewGame(String message) {
-        if ("new".equalsIgnoreCase(message) && cardDeck.isEmpty())
-            cardDeck = CardGenerate.newCardDeck();
+    public GameContent processingCommand(String message, String userId) {
+
+//        фиктивный игровой контент
+        GameContent content = new GameContent();
+
+        if (this.gameStarted){
+
+//        делают ход (нападают, подкидывают, отбиваются, говорят "бито", говорят "пас")
+//        пытаются написать во время игры (не будучи игроком, не в свою очередь, не той картой)
+
+            // TODO: 007 07.05.20 пытаемся обработать сообщение как игровое
+//            но не забываем, что могут прислать всякую муру. такие сообщения (не индексы. просто игнорим)
+//            также тут нужны все проверки типа его ли ход и вот это вот всё
+            content.setMessage("Попытка выполнить ход будет добавлена в следующих версиях");
+
+        } else if ("go".equalsIgnoreCase(message)){
+
+//            попытка начать игру
+
+            if (users.size() < MIN_NUM_PLAYERS) {
+                content.setMessage("Минимальное количество игроков для игры - 2." +
+                        "Игра против компьютера пока не поддерживается");
+                return content;
+            }
+
+            initGame();
+
+            return getCurrentGameContent(userId);
+
+        } else {
+
+//            просто болтают
+            content.setMessage(message);
+
+        }
+
+        return content;
+
+    }
+
+    private void initGame() {
+
+        this.gameStarted = true;
+
+//        инициализируем колоду: весь набор карт, перетасовка, определение козыря
+        this.cardDeck = initCardDeck();
+
+//        выбираем игроков из списка пользователей
+        int i = 1;
+        for (User user : users.values()) {
+            user.setRole(UserRole.PLAYER);
+            user.pickCards(this.cardDeck, MAX_NUM_CARD_ON_HAND);
+            if (i == MAX_NUM_PLAYERS) {
+                break;
+            }
+            i++;
+        }
+
+        // TODO: 007 07.05.20 жеребьевка и объявление результатов
+
+    }
+
+    private void endGame(){
+
+        gameStarted = false;
+
+//        выводим из игры игроков и очищаем карты в руках
+        users.forEach((s, user) -> {
+            user.setRole(UserRole.GUEST);
+            user.setHand(new Hand());
+        });
+
+//        очищаем колоду
+        cardDeck = null;
+
     }
 
 }
-

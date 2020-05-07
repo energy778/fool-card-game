@@ -14,6 +14,7 @@ public class GameContent {
     private int cardDeckSize;
     private int trumpSuit;
     private Card trump;
+    private String message;
 
     public GameContent() {
         cards = new ArrayList<>();
@@ -24,8 +25,10 @@ public class GameContent {
         return "GameContent{" +
                 "cards=" + cards +
                 ", cardDeckSize=" + cardDeckSize +
-                ", trump=" + trump +
                 ", trumpSuit=" + trumpSuit +
+                ", trump=" + trump +
+                ", message='" + message + '\'' +
                 '}';
     }
+
 }
