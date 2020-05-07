@@ -10,6 +10,7 @@ import org.springframework.stereotype.Controller;
 import ru.veretennikov.foolwebsocket.core.model.ChatMessage;
 import ru.veretennikov.foolwebsocket.model.GameContent;
 import ru.veretennikov.foolwebsocket.service.GameService;
+import ru.veretennikov.foolwebsocket.service.GreetingService;
 
 @Slf4j
 @Controller
@@ -17,6 +18,7 @@ import ru.veretennikov.foolwebsocket.service.GameService;
 public class GameController {
 
     private final GameService gameService;
+    private final GreetingService greetingService;
 
     @MessageMapping("/chat.sendMessage")
     @SendTo("/topic/public")
@@ -36,7 +38,9 @@ public class GameController {
         // Add username in web socket session
         String sender = chatMessage.getSender();
         headerAccessor.getSessionAttributes().put("username", sender);
+//        chatMessage.setType(ChatMessage.MessageType.JOIN);  определили на клиенте
         gameService.addUser(sender, headerAccessor.getSessionId());
+        chatMessage.setContent(greetingService.getGreeting(sender));
 
         return chatMessage;
 
