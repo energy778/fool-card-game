@@ -2,11 +2,13 @@ package ru.veretennikov.foolwebsocket.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
+import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
 import ru.veretennikov.foolwebsocket.core.model.ChatMessage;
 import ru.veretennikov.foolwebsocket.model.GameContent;
@@ -30,6 +32,7 @@ public class GameController {
         GameContent gameContent = gameService.processingCommand(message.getContent(), sessionId);
         message.setGameContent(gameContent);
 
+        // TODO: 008 08.05.20 отделять личные сообщения от публичных
         ChatMessage chatMessage = new ChatMessage();
         chatMessage.setContent("confidential");
         messagingTemplate.convertAndSend("/topic/private/" + sessionId, chatMessage);
@@ -58,5 +61,12 @@ public class GameController {
 //    Имелись в виду как раз методы, аннотированные @MessageMapping
 //    Например, сообщение, направленное по адресу /app/chat.sendMessage будет перенаправлено в метод sendMessage()
 //    А например, сообщение, направленное по адресу/app/chat.addUser будет перенаправлено в метод addUser()
+
+    @MessageExceptionHandler
+    @SendToUser(value = "/user/direct/errors", broadcast = false)
+    public String handleProfanity(RuntimeException e) {
+        return e.getMessage();
+    }
+
 
 }

@@ -21,7 +21,7 @@ public class WebSocketEventListener {
 
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectedEvent event) {
-        log.info("Received a new web socket connection");
+        log.info("Received a new web socket connection. Session id: {}", StompHeaderAccessor.wrap(event.getMessage()).getSessionId());
     }
 
     @EventListener
