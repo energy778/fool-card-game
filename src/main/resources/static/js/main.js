@@ -1,29 +1,29 @@
 'use strict';
 
-var usernamePage = document.querySelector('#username-page');
-var chatPage = document.querySelector('#chat-page');
-var usernameForm = document.querySelector('#usernameForm');
-var messageForm = document.querySelector('#messageForm');
-var messageInput = document.querySelector('#message');
-var messageArea = document.querySelector('#messageArea');
-var connectingElement = document.querySelector('.connecting');
+const usernamePage = document.querySelector('#username-page');
+const chatPage = document.querySelector('#chat-page');
+const usernameForm = document.querySelector('#usernameForm');
+const messageForm = document.querySelector('#messageForm');
+const messageInput = document.querySelector('#message');
+const messageArea = document.querySelector('#messageArea');
+const connectingElement = document.querySelector('.connecting');
 
-var stompClient = null;
-var username = null;
-var sessionId = null;
-
-var colors = [
+const colors = [
     '#2196F3', '#32c787', '#00BCD4', '#ff5652',
     '#ffc107', '#ff85af', '#FF9800', '#39bbb0'
 ];
-
-var colorsSuit = [
+const colorsSuit = [
     '#f00', '#000', '#000', '#f00'
 ];
-
-var suits = [
+const suits = [
     '♥', '♠', '♣', '♦'
 ];
+
+let stompClient = null;
+let username = null;
+let sessionId = null;
+
+// app
 
 function connect(event) {
     username = document.querySelector('#name').value.trim();
@@ -32,7 +32,7 @@ function connect(event) {
         usernamePage.classList.add('hidden');
         chatPage.classList.remove('hidden');
 
-        var socket = new SockJS('/ws');
+        let socket = new SockJS('/ws');
         stompClient = Stomp.over(socket);
         stompClient.connect({}, function(frame) {
             sessionId = socket.sessionId;
@@ -44,9 +44,13 @@ function connect(event) {
 }
 
 function onConnected(options) {
-    // Subscribe to the Public Topic
+
+    stompClient.subscribe('/topic/events', onUserEvent);
+    stompClient.subscribe('/topic/errors', onExceptionMessageReceived);
     stompClient.subscribe('/topic/public', onMessageReceived);
     stompClient.subscribe('/topic/private/' + sessionId, onPrivateMessageReceived);
+    stompClient.subscribe('/topic/game/errors', onGameExceptionMessageReceived);
+    // добавить личных сообщений об ошибках
 
     // Tell your username to the server
     stompClient.send("/app/chat.addUser",
@@ -55,20 +59,19 @@ function onConnected(options) {
     );
 
     connectingElement.classList.add('hidden');
-}
 
+}
 
 function onError(error) {
     connectingElement.textContent = 'Could not connect to WebSocket server. Please refresh this page to try again!';
     connectingElement.style.color = 'red';
 }
 
-
 function sendMessage(event) {
-    var messageContent = messageInput.value.trim();
+    let messageContent = messageInput.value.trim();
 
     if(messageContent && stompClient) {
-        var chatMessage = {
+        let chatMessage = {
             sender: username,
             content: messageInput.value,
             type: 'CHAT'
@@ -80,89 +83,113 @@ function sendMessage(event) {
     event.preventDefault();
 }
 
+// общие ошибки приложения
+function onExceptionMessageReceived(payload) {
+    // String
+    showMessageInChat(payload.body);
+}
 
-function onMessageReceived(payload) {
+// события, связанные (пока) со входом/выходом пользователей
+function onUserEvent(payload) {
+    // ServerChatMessage
 
-    var message = JSON.parse(payload.body);
-
-    var messageElement = document.createElement('li');
+    let message = JSON.parse(payload.body);
 
     if(message.type === 'JOIN') {
-        messageElement.classList.add('event-message');
+        // текст приветствия сформирован на сервере
     } else if (message.type === 'LEAVE') {
-        messageElement.classList.add('event-message');
         message.content = message.sender + ' покинул нас';
-    } else if (message.type === 'CHAT') {
+    } else {
+        return;
+    }
+
+    showMessageInChat(message.content);
+
+}
+
+// ошибки, связанные с игрой
+function onGameExceptionMessageReceived(payload) {
+    // String
+    showMessageInChat(payload.body);
+}
+
+// личные сообщения
+function onPrivateMessageReceived(payload) {
+    // в боди - гейм контент (личный. карты на руках, ...)
+    console.log(username + ' received private message');
+}
+
+// все остальные сообщения
+function onMessageReceived(payload) {
+    // в боди - гейм контент (публичный)
+
+    let message = JSON.parse(payload.body);
+    let messageElement = document.createElement('li');
+
+    if (message.type === 'CHAT') {
         messageElement.classList.add('chat-message');
 
-        var avatarElement = document.createElement('i');
-        var avatarText = document.createTextNode(message.sender[0]);
+        let avatarElement = document.createElement('i');
+        let avatarText = document.createTextNode(message.sender[0]);
         avatarElement.appendChild(avatarText);
         avatarElement.style['background-color'] = getAvatarColor(message.sender);
         messageElement.appendChild(avatarElement);
 
-        var usernameElement = document.createElement('span');
-        var usernameText = document.createTextNode(message.sender);
+        let usernameElement = document.createElement('span');
+        let usernameText = document.createTextNode(message.sender);
         usernameElement.appendChild(usernameText);
         messageElement.appendChild(usernameElement);
+    } else {
+        return;
     }
 
-    if (message.type === 'CHAT') {
+    if (message.gameContent.message === null){
 
-        if (message.gameContent.message === null){
+        let cards = message.gameContent.cards;
 
-            let cards = message.gameContent.cards;
-            // alert(message.message);
-            for (var i = 0; i < message.content.cards.length; i++){
+        for (let i = 0; i < cards.length; i++){
 
-                var card = cards[i];
-                var suitIndex = card.suit;
-                var suit = suits[suitIndex];
+            let card = cards[i];
+            let suitIndex = card.suit;
+            let suit = suits[suitIndex];
 
-                var cardElement = document.createElement('g-card');
+            let cardElement = document.createElement('g-card');
 
-                var cardElementText1 = document.createElement('div');
-                var cardText1 = document.createTextNode(suit);
-                cardElementText1.appendChild(cardText1);
+            let cardElementText1 = document.createElement('div');
+            let cardText1 = document.createTextNode(suit);
+            cardElementText1.appendChild(cardText1);
 
-                var cardElementText2 = document.createElement('div');
-                var cardText2 = document.createTextNode(card.rank);
-                cardElementText2.appendChild(cardText2);
+            let cardElementText2 = document.createElement('div');
+            let cardText2 = document.createTextNode(card.rank);
+            cardElementText2.appendChild(cardText2);
 
-                var cardElementText3 = document.createElement('div');
-                var cardText3 = document.createTextNode(suit);
-                cardElementText3.appendChild(cardText3);
+            let cardElementText3 = document.createElement('div');
+            let cardText3 = document.createTextNode(suit);
+            cardElementText3.appendChild(cardText3);
 
-                cardElement.style['color'] = colorsSuit[suitIndex];
-                if (card.trump)
-                    cardElement.style['font-weight'] = 'bold';
+            cardElement.style['color'] = colorsSuit[suitIndex];
+            if (card.trump)
+                cardElement.style['font-weight'] = 'bold';
 
-                cardElement.appendChild(cardElementText1);
-                cardElement.appendChild(cardElementText2);
-                cardElement.appendChild(cardElementText3);
+            cardElement.appendChild(cardElementText1);
+            cardElement.appendChild(cardElementText2);
+            cardElement.appendChild(cardElementText3);
 
-                // контейнер для карт
-                var cElementContainer = document.createElement('span');
-                cElementContainer.appendChild(cardElement);
-                messageElement.appendChild(cElementContainer);
+            // контейнер для карт
+            let cElementContainer = document.createElement('span');
+            cElementContainer.appendChild(cardElement);
+            messageElement.appendChild(cElementContainer);
 
-                // TODO: можно сделать так, чтобы карты выводились на следующей строке после ника
-
-            }
-
-        } else {
-
-            var textElement = document.createElement('p');
-            var messageText = document.createTextNode(message.gameContent.message);
-            textElement.appendChild(messageText);
-            messageElement.appendChild(textElement);
+            // TODO: можно сделать так, чтобы карты выводились на следующей строке после ника
 
         }
 
     } else {
 
-        var textElement = document.createElement('p');
-        var messageText = document.createTextNode(message.content);
+        // пока такая логика: если нет message, значит стандартная ситуация вывода карт.
+        // в противном случае - выводим сообщение из message.gameContent.message
+        let textElement = document.createElement('p');
+        let messageText = document.createTextNode(message.gameContent.message);
         textElement.appendChild(messageText);
         messageElement.appendChild(textElement);
 
@@ -174,18 +201,34 @@ function onMessageReceived(payload) {
 }
 
 
-function onPrivateMessageReceived(payload) {
-    alert(username + ' received private message');
+// service
+
+function showMessageInChat(message) {
+
+    let messageElement = document.createElement('li');
+    messageElement.classList.add('event-message');
+
+    let textElement = document.createElement('p');
+    let messageText = document.createTextNode(message);
+    textElement.appendChild(messageText);
+    messageElement.appendChild(textElement);
+
+    messageArea.appendChild(messageElement);
+    messageArea.scrollTop = messageArea.scrollHeight;
+
 }
 
 function getAvatarColor(messageSender) {
-    var hash = 0;
-    for (var i = 0; i < messageSender.length; i++) {
+
+    let hash = 0;
+    for (let i = 0; i < messageSender.length; i++) {
         hash = 31 * hash + messageSender.charCodeAt(i);
     }
 
-    var index = Math.abs(hash % colors.length);
+    let index = Math.abs(hash % colors.length);
+
     return colors[index];
+
 }
 
 usernameForm.addEventListener('submit', connect, true)

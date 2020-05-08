@@ -8,6 +8,7 @@ import java.util.List;
 
 @Setter
 @Getter
+// TODO: 009 09.05.20 нужен приватный и публичный контент
 public class GameContent {
 
     private List<Card> cards;

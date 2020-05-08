@@ -3,6 +3,7 @@ package ru.veretennikov.foolwebsocket.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.veretennikov.foolwebsocket.common.util.CardGenerate;
+import ru.veretennikov.foolwebsocket.exception.DurakGameException;
 import ru.veretennikov.foolwebsocket.model.*;
 
 import java.util.HashMap;
@@ -54,11 +55,11 @@ public class DurakGameServiceImpl implements GameService {
     }
 
     @Override
-    public void addUser(String username, String sessionId) {
+    public void addUser(String username, String userId) {
 
-        User newUser = new User(sessionId, username);
+        User newUser = new User(userId, username);
         newUser.setRole(UserRole.GUEST);
-        users.put(sessionId, newUser);
+        users.put(userId, newUser);
 
         System.out.println(String.format("%s вошел в игру", username));
         System.out.println(String.format("Список всех игроков: %s", users));
@@ -68,12 +69,14 @@ public class DurakGameServiceImpl implements GameService {
     @Override
     public String removeUser(String userId) {
 
-        // TODO: 006 06.05.20 заканчивать игру, если пользователь был игроком, а не наблюдателем
         User user = users.remove(userId);
         String username = user.getName();
 
         System.out.println(String.format("%s вышел из игры", username));
         System.out.println(String.format("Список всех игроков: %s", users));
+
+// TODO: 006 06.05.20 заканчивать игру, если пользователь был игроком, а не наблюдателем
+//        endGame();
 
         return username;
 
@@ -93,7 +96,7 @@ public class DurakGameServiceImpl implements GameService {
             // TODO: 007 07.05.20 пытаемся обработать сообщение как игровое
 //            но не забываем, что могут прислать всякую муру. такие сообщения (не индексы. просто игнорим)
 //            также тут нужны все проверки типа его ли ход и вот это вот всё
-            content.setMessage("Попытка выполнить ход будет добавлена в следующих версиях");
+            throw new DurakGameException("Попытка выполнить ход будет добавлена в следующих версиях");
 
         } else if ("go".equalsIgnoreCase(message)){
 
@@ -102,9 +105,8 @@ public class DurakGameServiceImpl implements GameService {
             if (users.size() < MIN_NUM_PLAYERS) {
                 // TODO: 008 08.05.20 сейчас выводится от участника, но не должно. можно придумать другой тип сообщения
                 //          но игровой сервис не должен знать вообще, что есть какие-то типы сообщений
-                content.setMessage("Минимальное количество игроков для игры - 2." +
+                throw new DurakGameException("Минимальное количество игроков для игры - 2. " +
                         "Игра против компьютера пока не поддерживается");
-                return content;
             }
 
             initGame();
