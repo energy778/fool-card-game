@@ -43,10 +43,10 @@ function connect(event) {
     event.preventDefault();
 }
 
-
 function onConnected(options) {
     // Subscribe to the Public Topic
     stompClient.subscribe('/topic/public', onMessageReceived);
+    stompClient.subscribe('/topic/private/' + sessionId, onPrivateMessageReceived);
 
     // Tell your username to the server
     stompClient.send("/app/chat.addUser",
@@ -173,6 +173,10 @@ function onMessageReceived(payload) {
 
 }
 
+
+function onPrivateMessageReceived(payload) {
+    alert(username + ' received private message');
+}
 
 function getAvatarColor(messageSender) {
     var hash = 0;

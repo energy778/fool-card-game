@@ -6,6 +6,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Controller;
 import ru.veretennikov.foolwebsocket.core.model.ChatMessage;
 import ru.veretennikov.foolwebsocket.model.GameContent;
@@ -19,13 +20,20 @@ public class GameController {
 
     private final GameService gameService;
     private final GreetingService greetingService;
+    private final SimpMessageSendingOperations messagingTemplate;
 
     @MessageMapping("/chat.sendMessage")
     @SendTo("/topic/public")
     public ChatMessage sendMessage(@Payload ChatMessage message, SimpMessageHeaderAccessor headerAccessor) {
 
-        GameContent gameContent = gameService.processingCommand(message.getContent(), headerAccessor.getSessionId());
+        String sessionId = headerAccessor.getSessionId();
+        GameContent gameContent = gameService.processingCommand(message.getContent(), sessionId);
         message.setGameContent(gameContent);
+
+        ChatMessage chatMessage = new ChatMessage();
+        chatMessage.setContent("confidential");
+        messagingTemplate.convertAndSend("/topic/private/" + sessionId, chatMessage);
+//        messagingTemplate.convertAndSendToUser(sessionId, "/topic/public", chatMessage);
 
         return message;
 
