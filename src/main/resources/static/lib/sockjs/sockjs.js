@@ -823,7 +823,9 @@ SockJS.prototype._connect = function() {
     this._transportTimeoutId = setTimeout(this._transportTimeout.bind(this), timeoutMs);
     debug('using timeout', timeoutMs);
 
-    var transportUrl = urlUtils.addPath(this._transUrl, '/' + this._server + '/' + this._generateSessionId());
+    this.sessionId = this._generateSessionId();
+    var transportUrl = urlUtils.addPath(this._transUrl, '/' + this._server + '/' + this.sessionId);
+
     var options = this._transportOptions[Transport.transportName];
     debug('transport url', transportUrl);
     var transportObj = new Transport(transportUrl, this._transUrl, options);
