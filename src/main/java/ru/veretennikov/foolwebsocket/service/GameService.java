@@ -11,9 +11,9 @@ public interface GameService {
     String removeUser(String username);
 
     boolean isGameStarted();
-    void startGame();
+    void startGame(String sessionId);
     void processingCommand(String content, String userId);
     Map<String, PrivateGameContent> getPrivateContent();
-    PublicGameContent getPublicContent();
+    PublicGameContent getPublicContent(String sessionId);
 
 }

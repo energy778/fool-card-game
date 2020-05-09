@@ -11,4 +11,5 @@ import java.util.List;
 @NoArgsConstructor
 public abstract class GameContent {
     private List<Card> cards;
+    private String gameMessage;
 }

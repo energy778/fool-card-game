@@ -3,7 +3,7 @@ package ru.veretennikov.foolwebsocket.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.veretennikov.foolwebsocket.common.util.CardGenerate;
-import ru.veretennikov.foolwebsocket.exception.DurakGameException;
+import ru.veretennikov.foolwebsocket.exception.DurakGamePrivateException;
 import ru.veretennikov.foolwebsocket.model.*;
 
 import java.util.HashMap;
@@ -33,14 +33,13 @@ public class DurakGameServiceImpl implements GameService {
     }
 
     @Override
-    public void startGame() {
+    public void startGame(String userId) {
 
         if (users.size() < MIN_NUM_PLAYERS) {
-            throw new DurakGameException("Минимальное количество игроков для игры - 2. " +
-                    "Игра против компьютера пока не поддерживается");
+            throw new DurakGamePrivateException("Минимальное количество игроков для игры - 2. Игра против компьютера пока не поддерживается", userId);
         }
 
-        initGame();
+        initGame(userId);
 
     }
 
@@ -81,14 +80,10 @@ public class DurakGameServiceImpl implements GameService {
 ////        фиктивный игровой контент
 //        GameContent content = new GameContent();
 
-        if (!this.gameStarted){
-            throw new DurakGameException("Игра еще не начата. Для начала игры введите 'go'");
-        }
-
         // TODO: 007 07.05.20 пытаемся обработать сообщение как игровое
 //            но не забываем, что могут прислать всякую муру. такие сообщения (не индексы. просто игнорим)
 //            также тут нужны все проверки типа его ли ход и вот это вот всё
-        throw new DurakGameException("Попытка выполнить ход будет добавлена в следующих версиях");
+        throw new DurakGamePrivateException("Попытка выполнить ход будет добавлена в следующих версиях", userId);
 
 //        return content;
 
@@ -100,17 +95,17 @@ public class DurakGameServiceImpl implements GameService {
                 .filter(entry -> UserRole.PLAYER.equals(entry.getValue().getRole()))
                 .collect(
                         HashMap::new,
-                        (map, entry) -> map.put(entry.getKey(), getCurrentGameContent(entry.getKey())),
+                        (map, entry) -> map.put(entry.getKey(), getCurrentPrivateGameContent(entry.getKey())),
                         HashMap::putAll
                 );
     }
 
     @Override
-    public PublicGameContent getPublicContent() {
-        return getCurrentGameContent();
+    public PublicGameContent getPublicContent(String sessionId) {
+        return getCurrentPublicGameContent(sessionId);
     }
 
-    private void initGame() {
+    private void initGame(String userId) {
 
         this.gameStarted = true;
 
@@ -152,7 +147,7 @@ public class DurakGameServiceImpl implements GameService {
     /**
      * получение публичного игрового контента
      **/
-    private PublicGameContent getCurrentGameContent() {
+    private PublicGameContent getCurrentPublicGameContent(String sessionId) {
 
         PublicGameContent content = new PublicGameContent();
 
@@ -185,13 +180,13 @@ public class DurakGameServiceImpl implements GameService {
     /**
      * получение приватного игрового контента пользователя
      **/
-    private PrivateGameContent getCurrentGameContent(String userId) {
+    private PrivateGameContent getCurrentPrivateGameContent(String userId) {
 
         PrivateGameContent content = new PrivateGameContent();
         content.setCards(users.get(userId).getCards());
+        content.setGameMessage("Ваши карты (эту строку видите только вы): ");
         return content;
 
     }
-
 
 }

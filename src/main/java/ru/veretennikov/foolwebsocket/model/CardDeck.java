@@ -52,7 +52,9 @@ public class CardDeck {
         }
 
         // TODO: 005 05.05.20 добавить опцию сортировки по разным критериям
-        cards.sort(Comparator.comparing(Card::getRank));
+        //  по умолчанию сортируем сначала по возрастанию ранга, а потом по масти.
+        cards.sort(Comparator.comparing(card -> ((Card) card).getRank().ordinal())
+                         .thenComparing(card -> ((Card) card).getSuit()));
 
         return cards;
 

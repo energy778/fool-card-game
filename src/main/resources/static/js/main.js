@@ -46,10 +46,13 @@ function connect(event) {
 function onConnected(options) {
 
     stompClient.subscribe('/topic/events', onUserEvent);
-    stompClient.subscribe('/topic/errors', onExceptionMessageReceived);
     stompClient.subscribe('/topic/public', onMessageReceived);
     stompClient.subscribe('/topic/private/' + sessionId, onPrivateMessageReceived);
+    // stompClient.subscribe('/user/' + sessionId + '/topic/private/', onPrivateMessageReceived);
+    stompClient.subscribe('/topic/game/errors/' + sessionId, onGameExceptionMessageReceived);
     stompClient.subscribe('/topic/game/errors', onGameExceptionMessageReceived);
+    stompClient.subscribe('/topic/errors/' + sessionId, onExceptionMessageReceived);
+    stompClient.subscribe('/topic/errors', onExceptionMessageReceived);
     // добавить личных сообщений об ошибках
 
     // Tell your username to the server
@@ -121,58 +124,17 @@ function onPrivateMessageReceived(payload) {
 
     messageElement.classList.add('chat-message');
 
-    let avatarElement = document.createElement('i');
-    // let avatarText = document.createTextNode(message.sender[0]);                 // TODO: 009 09.05.20 не всегда нужно знать, кто был инициатором
-    let avatarText = document.createTextNode(username[0]);
-    avatarElement.appendChild(avatarText);
-    // avatarElement.style['background-color'] = getAvatarColor(message.sender);    // TODO: 009 09.05.20 не всегда нужно знать, кто был инициатором
-    avatarElement.style['background-color'] = getAvatarColor(username);
-    messageElement.appendChild(avatarElement);
-
-    let usernameElement = document.createElement('span');
-    // let usernameText = document.createTextNode(message.sender);                  // TODO: 009 09.05.20 не всегда нужно знать, кто был инициатором
-    let usernameText = document.createTextNode(username);
-    usernameElement.appendChild(usernameText);
-    messageElement.appendChild(usernameElement);
-
-    let cards = message.gameContent.cards;
-
-    for (let i = 0; i < cards.length; i++){
-
-        let card = cards[i];
-        let suitIndex = card.suit;
-        let suit = suits[suitIndex];
-
-        let cardElement = document.createElement('g-card');
-
-        let cardElementText1 = document.createElement('div');
-        let cardText1 = document.createTextNode(suit);
-        cardElementText1.appendChild(cardText1);
-
-        let cardElementText2 = document.createElement('div');
-        let cardText2 = document.createTextNode(card.rank);
-        cardElementText2.appendChild(cardText2);
-
-        let cardElementText3 = document.createElement('div');
-        let cardText3 = document.createTextNode(suit);
-        cardElementText3.appendChild(cardText3);
-
-        cardElement.style['color'] = colorsSuit[suitIndex];
-        if (card.trump)
-            cardElement.style['font-weight'] = 'bold';
-
-        cardElement.appendChild(cardElementText1);
-        cardElement.appendChild(cardElementText2);
-        cardElement.appendChild(cardElementText3);
-
-        // контейнер для карт
-        let cElementContainer = document.createElement('span');
-        cElementContainer.appendChild(cardElement);
-        messageElement.appendChild(cElementContainer);
-
-        // TODO: можно сделать так, чтобы карты выводились на следующей строке после ника
-
+    if(message.type === 'GAME_MESSAGE') {
+        let cards = message.gameContent.cards;
+        showCards(cards, messageElement);
+    } else {
+        return;
     }
+
+    let textElement = document.createElement('p');
+    let messageText = document.createTextNode(message.gameContent.gameMessage);
+    textElement.appendChild(messageText);
+    messageElement.appendChild(textElement);
 
     messageArea.appendChild(messageElement);
     messageArea.scrollTop = messageArea.scrollHeight;
@@ -225,43 +187,7 @@ function onMessageReceived(payload) {
         messageElement.appendChild(usernameElement);
 
         let cards = message.gameContent.cards;
-
-        for (let i = 0; i < cards.length; i++){
-
-            let card = cards[i];
-            let suitIndex = card.suit;
-            let suit = suits[suitIndex];
-
-            let cardElement = document.createElement('g-card');
-
-            let cardElementText1 = document.createElement('div');
-            let cardText1 = document.createTextNode(suit);
-            cardElementText1.appendChild(cardText1);
-
-            let cardElementText2 = document.createElement('div');
-            let cardText2 = document.createTextNode(card.rank);
-            cardElementText2.appendChild(cardText2);
-
-            let cardElementText3 = document.createElement('div');
-            let cardText3 = document.createTextNode(suit);
-            cardElementText3.appendChild(cardText3);
-
-            cardElement.style['color'] = colorsSuit[suitIndex];
-            if (card.trump)
-                cardElement.style['font-weight'] = 'bold';
-
-            cardElement.appendChild(cardElementText1);
-            cardElement.appendChild(cardElementText2);
-            cardElement.appendChild(cardElementText3);
-
-            // контейнер для карт
-            let cElementContainer = document.createElement('span');
-            cElementContainer.appendChild(cardElement);
-            messageElement.appendChild(cElementContainer);
-
-            // TODO: можно сделать так, чтобы карты выводились на следующей строке после ника
-
-        }
+        showCards(cards, messageElement);
 
     } else {
         return;
@@ -300,6 +226,50 @@ function getAvatarColor(messageSender) {
     let index = Math.abs(hash % colors.length);
 
     return colors[index];
+
+}
+
+function showCards(cards, messageElement) {
+
+    if (cards === null)
+        return;
+
+    for (let i = 0; i < cards.length; i++) {
+
+        let card = cards[i];
+        let suitIndex = card.suit;
+        let suit = suits[suitIndex];
+
+        let cardElement = document.createElement('g-card');
+
+        let cardElementText1 = document.createElement('div');
+        let cardText1 = document.createTextNode(suit);
+        cardElementText1.appendChild(cardText1);
+
+        let cardElementText2 = document.createElement('div');
+        let cardText2 = document.createTextNode(card.rank);
+        cardElementText2.appendChild(cardText2);
+
+        let cardElementText3 = document.createElement('div');
+        let cardText3 = document.createTextNode(suit);
+        cardElementText3.appendChild(cardText3);
+
+        cardElement.style['color'] = colorsSuit[suitIndex];
+        if (card.trump)
+            cardElement.style['font-weight'] = 'bold';
+
+        cardElement.appendChild(cardElementText1);
+        cardElement.appendChild(cardElementText2);
+        cardElement.appendChild(cardElementText3);
+
+        // контейнер для карт
+        let cElementContainer = document.createElement('span');
+        cElementContainer.appendChild(cardElement);
+        messageElement.appendChild(cElementContainer);
+
+        // TODO: можно сделать так, чтобы карты выводились на следующей строке после ника
+
+    }
 
 }
 
