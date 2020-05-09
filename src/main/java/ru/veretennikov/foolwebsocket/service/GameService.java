@@ -1,11 +1,19 @@
 package ru.veretennikov.foolwebsocket.service;
 
-import ru.veretennikov.foolwebsocket.model.GameContent;
+import ru.veretennikov.foolwebsocket.model.PrivateGameContent;
+import ru.veretennikov.foolwebsocket.model.PublicGameContent;
+
+import java.util.Map;
 
 public interface GameService {
 
     void addUser(String username, String userId);
     String removeUser(String username);
-    GameContent processingCommand(String content, String userId);
+
+    boolean isGameStarted();
+    void startGame();
+    void processingCommand(String content, String userId);
+    Map<String, PrivateGameContent> getPrivateContent();
+    PublicGameContent getPublicContent();
 
 }

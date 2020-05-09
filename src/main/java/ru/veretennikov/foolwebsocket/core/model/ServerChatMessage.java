@@ -8,5 +8,12 @@ import lombok.Setter;
 @Getter
 @NoArgsConstructor
 public class ServerChatMessage extends ChatMessage {
+
     private String content;
+
+    public ServerChatMessage(String content) {
+        super();
+        this.content = content;
+    }
+
 }

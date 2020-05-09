@@ -27,30 +27,20 @@ public class DurakGameServiceImpl implements GameService {
 
     private final Map<String, User> users = new HashMap();
 
-    /**
-     * получение реального игрового контента по пользователю
-     **/
-    private GameContent getCurrentGameContent(String userId) {
+    @Override
+    public boolean isGameStarted() {
+        return this.gameStarted;
+    }
 
-        GameContent content = new GameContent();
+    @Override
+    public void startGame() {
 
-        // TODO: 007 07.05.20 добавить проверки
-        content.setCards(users.get(userId).getCards());
+        if (users.size() < MIN_NUM_PLAYERS) {
+            throw new DurakGameException("Минимальное количество игроков для игры - 2. " +
+                    "Игра против компьютера пока не поддерживается");
+        }
 
-//        количество оставшихся в колоде карт
-        content.setCardDeckSize(cardDeck.size());
-
-//        козырь
-        content.setTrumpSuit(cardDeck.getTrumpSuit());
-
-//        иногда - козырная карта (в самом начале новой игры - чтобы отобразить ее один раз на игровом поле)
-        content.setTrump(cardDeck.getTrump());
-
-        // TODO: 006 06.05.20 на время отладки
-//        log.debug("Возвращаемый контент: {}", content);
-        System.out.println(String.format("Возвращаемый контент: %s", content));
-
-        return content;
+        initGame();
 
     }
 
@@ -75,53 +65,49 @@ public class DurakGameServiceImpl implements GameService {
         System.out.println(String.format("%s вышел из игры", username));
         System.out.println(String.format("Список всех игроков: %s", users));
 
-// TODO: 006 06.05.20 заканчивать игру, если пользователь был игроком, а не наблюдателем
-//        endGame();
+        if (UserRole.PLAYER.equals(user.getRole()))
+            endGame();
+
+        // TODO: 006 06.05.20 заканчивать игру, если пользователь был игроком, а не наблюдателем
+        //  сообщить о результатах и т.д. и т.п. не молча короче
 
         return username;
 
     }
 
     @Override
-    public GameContent processingCommand(String message, String userId) {
+    public void processingCommand(String message, String userId) {
 
-//        фиктивный игровой контент
-        GameContent content = new GameContent();
+////        фиктивный игровой контент
+//        GameContent content = new GameContent();
 
-        if (this.gameStarted){
-
-//        делают ход (нападают, подкидывают, отбиваются, говорят "бито", говорят "пас")
-//        пытаются написать во время игры (не будучи игроком, не в свою очередь, не той картой)
-
-            // TODO: 007 07.05.20 пытаемся обработать сообщение как игровое
-//            но не забываем, что могут прислать всякую муру. такие сообщения (не индексы. просто игнорим)
-//            также тут нужны все проверки типа его ли ход и вот это вот всё
-            throw new DurakGameException("Попытка выполнить ход будет добавлена в следующих версиях");
-
-        } else if ("go".equalsIgnoreCase(message)){
-
-//            попытка начать игру
-
-            if (users.size() < MIN_NUM_PLAYERS) {
-                // TODO: 008 08.05.20 сейчас выводится от участника, но не должно. можно придумать другой тип сообщения
-                //          но игровой сервис не должен знать вообще, что есть какие-то типы сообщений
-                throw new DurakGameException("Минимальное количество игроков для игры - 2. " +
-                        "Игра против компьютера пока не поддерживается");
-            }
-
-            initGame();
-
-            return getCurrentGameContent(userId);
-
-        } else {
-
-//            просто болтают
-            content.setMessage(message);
-
+        if (!this.gameStarted){
+            throw new DurakGameException("Игра еще не начата. Для начала игры введите 'go'");
         }
 
-        return content;
+        // TODO: 007 07.05.20 пытаемся обработать сообщение как игровое
+//            но не забываем, что могут прислать всякую муру. такие сообщения (не индексы. просто игнорим)
+//            также тут нужны все проверки типа его ли ход и вот это вот всё
+        throw new DurakGameException("Попытка выполнить ход будет добавлена в следующих версиях");
 
+//        return content;
+
+    }
+
+    @Override
+    public Map<String, PrivateGameContent> getPrivateContent() {
+        return users.entrySet().stream()
+                .filter(entry -> UserRole.PLAYER.equals(entry.getValue().getRole()))
+                .collect(
+                        HashMap::new,
+                        (map, entry) -> map.put(entry.getKey(), getCurrentGameContent(entry.getKey())),
+                        HashMap::putAll
+                );
+    }
+
+    @Override
+    public PublicGameContent getPublicContent() {
+        return getCurrentGameContent();
     }
 
     private void initGame() {
@@ -142,6 +128,8 @@ public class DurakGameServiceImpl implements GameService {
             i++;
         }
 
+        // TODO: 009 09.05.20 надо сказать, кто будет играть. потому что игроков может быть больше максимально допустимого
+
         // TODO: 007 07.05.20 жеребьевка и объявление результатов
 
     }
@@ -160,5 +148,50 @@ public class DurakGameServiceImpl implements GameService {
         cardDeck = null;
 
     }
+
+    /**
+     * получение публичного игрового контента
+     **/
+    private PublicGameContent getCurrentGameContent() {
+
+        PublicGameContent content = new PublicGameContent();
+
+//        // TODO: 007 07.05.20 добавить проверки
+//        content.setCards(cardDeck.getCards());
+
+//        количество оставшихся в колоде карт
+        content.setCardDeckSize(cardDeck.size());
+
+//        козырь
+        content.setTrumpSuit(cardDeck.getTrumpSuit());
+
+//        иногда - козырная карта (в самом начале новой игры - чтобы отобразить ее один раз на игровом поле)
+        content.setTrump(cardDeck.getTrump());
+
+//        // TODO: 006 06.05.20 на время отладки
+////        log.debug("Возвращаемый контент: {}", content);
+//        System.out.println(String.format("Возвращаемый контент: %s", content));
+
+//        чей ход
+//        сейчас ход защиты или нападения
+//          защищаться можно только если сейчас ход защиты
+//              а ход защиты до тех пор, пока есть на поле открытые пары
+//        атаковать и подкидывать можно в любое время до тех пор, пока не будет 6 пар на поле
+
+        return content;
+
+    }
+
+    /**
+     * получение приватного игрового контента пользователя
+     **/
+    private PrivateGameContent getCurrentGameContent(String userId) {
+
+        PrivateGameContent content = new PrivateGameContent();
+        content.setCards(users.get(userId).getCards());
+        return content;
+
+    }
+
 
 }

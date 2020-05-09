@@ -74,7 +74,7 @@ function sendMessage(event) {
         let chatMessage = {
             sender: username,
             content: messageInput.value,
-            type: 'CHAT'
+            type: 'MESSAGE'
         };
 
         stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
@@ -115,18 +115,79 @@ function onGameExceptionMessageReceived(payload) {
 
 // личные сообщения
 function onPrivateMessageReceived(payload) {
-    // в боди - гейм контент (личный. карты на руках, ...)
-    console.log(username + ' received private message');
-}
-
-// все остальные сообщения
-function onMessageReceived(payload) {
-    // в боди - гейм контент (публичный)
 
     let message = JSON.parse(payload.body);
     let messageElement = document.createElement('li');
 
-    if (message.type === 'CHAT') {
+    messageElement.classList.add('chat-message');
+
+    let avatarElement = document.createElement('i');
+    // let avatarText = document.createTextNode(message.sender[0]);                 // TODO: 009 09.05.20 не всегда нужно знать, кто был инициатором
+    let avatarText = document.createTextNode(username[0]);
+    avatarElement.appendChild(avatarText);
+    // avatarElement.style['background-color'] = getAvatarColor(message.sender);    // TODO: 009 09.05.20 не всегда нужно знать, кто был инициатором
+    avatarElement.style['background-color'] = getAvatarColor(username);
+    messageElement.appendChild(avatarElement);
+
+    let usernameElement = document.createElement('span');
+    // let usernameText = document.createTextNode(message.sender);                  // TODO: 009 09.05.20 не всегда нужно знать, кто был инициатором
+    let usernameText = document.createTextNode(username);
+    usernameElement.appendChild(usernameText);
+    messageElement.appendChild(usernameElement);
+
+    let cards = message.gameContent.cards;
+
+    for (let i = 0; i < cards.length; i++){
+
+        let card = cards[i];
+        let suitIndex = card.suit;
+        let suit = suits[suitIndex];
+
+        let cardElement = document.createElement('g-card');
+
+        let cardElementText1 = document.createElement('div');
+        let cardText1 = document.createTextNode(suit);
+        cardElementText1.appendChild(cardText1);
+
+        let cardElementText2 = document.createElement('div');
+        let cardText2 = document.createTextNode(card.rank);
+        cardElementText2.appendChild(cardText2);
+
+        let cardElementText3 = document.createElement('div');
+        let cardText3 = document.createTextNode(suit);
+        cardElementText3.appendChild(cardText3);
+
+        cardElement.style['color'] = colorsSuit[suitIndex];
+        if (card.trump)
+            cardElement.style['font-weight'] = 'bold';
+
+        cardElement.appendChild(cardElementText1);
+        cardElement.appendChild(cardElementText2);
+        cardElement.appendChild(cardElementText3);
+
+        // контейнер для карт
+        let cElementContainer = document.createElement('span');
+        cElementContainer.appendChild(cardElement);
+        messageElement.appendChild(cElementContainer);
+
+        // TODO: можно сделать так, чтобы карты выводились на следующей строке после ника
+
+    }
+
+    messageArea.appendChild(messageElement);
+    messageArea.scrollTop = messageArea.scrollHeight;
+
+}
+
+// все остальные сообщения
+function onMessageReceived(payload) {
+
+    let message = JSON.parse(payload.body);
+    let messageElement = document.createElement('li');
+
+    if (message.type === 'MESSAGE') {
+        // просто сообщение в чат. всегда от имени пользователя
+
         messageElement.classList.add('chat-message');
 
         let avatarElement = document.createElement('i');
@@ -139,11 +200,29 @@ function onMessageReceived(payload) {
         let usernameText = document.createTextNode(message.sender);
         usernameElement.appendChild(usernameText);
         messageElement.appendChild(usernameElement);
-    } else {
-        return;
-    }
 
-    if (message.gameContent.message === null){
+        //
+        let textElement = document.createElement('p');
+        let messageText = document.createTextNode(message.content);
+        textElement.appendChild(messageText);
+        messageElement.appendChild(textElement);
+
+    } else if (message.type === 'GAME_MESSAGE') {
+        // игровое сообщение. может быть от пользователя
+
+        // пока что все скопировал из блока выше
+        messageElement.classList.add('chat-message');
+
+        let avatarElement = document.createElement('i');
+        let avatarText = document.createTextNode(message.sender[0]);
+        avatarElement.appendChild(avatarText);
+        avatarElement.style['background-color'] = getAvatarColor(message.sender);
+        messageElement.appendChild(avatarElement);
+
+        let usernameElement = document.createElement('span');
+        let usernameText = document.createTextNode(message.sender);
+        usernameElement.appendChild(usernameText);
+        messageElement.appendChild(usernameElement);
 
         let cards = message.gameContent.cards;
 
@@ -185,14 +264,7 @@ function onMessageReceived(payload) {
         }
 
     } else {
-
-        // пока такая логика: если нет message, значит стандартная ситуация вывода карт.
-        // в противном случае - выводим сообщение из message.gameContent.message
-        let textElement = document.createElement('p');
-        let messageText = document.createTextNode(message.gameContent.message);
-        textElement.appendChild(messageText);
-        messageElement.appendChild(textElement);
-
+        return;
     }
 
     messageArea.appendChild(messageElement);

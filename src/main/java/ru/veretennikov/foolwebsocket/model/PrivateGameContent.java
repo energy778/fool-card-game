@@ -4,11 +4,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Setter
 @Getter
 @NoArgsConstructor
-public abstract class GameContent {
-    private List<Card> cards;
+public class PrivateGameContent extends GameContent{
+//    пока что только карты на руках. cards - от родительского
 }

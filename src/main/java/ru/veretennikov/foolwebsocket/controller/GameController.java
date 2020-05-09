@@ -14,9 +14,11 @@ import ru.veretennikov.foolwebsocket.core.model.ClientChatMessage;
 import ru.veretennikov.foolwebsocket.core.model.GameServerChatMessage;
 import ru.veretennikov.foolwebsocket.core.model.ServerChatMessage;
 import ru.veretennikov.foolwebsocket.exception.GameException;
-import ru.veretennikov.foolwebsocket.model.GameContent;
+import ru.veretennikov.foolwebsocket.model.PrivateGameContent;
 import ru.veretennikov.foolwebsocket.service.GameService;
 import ru.veretennikov.foolwebsocket.service.GreetingService;
+
+import java.util.Map;
 
 @Slf4j
 @Controller
@@ -29,21 +31,59 @@ public class GameController {
 
     @MessageMapping("/chat.sendMessage")
     @SendTo("/topic/public")
-    public GameServerChatMessage sendMessage(@Payload ClientChatMessage incomeMessage, SimpMessageHeaderAccessor headerAccessor) {
+    public ChatMessage sendMessage(@Payload ClientChatMessage incomeMessage, SimpMessageHeaderAccessor headerAccessor) {
 
-        GameServerChatMessage message = new GameServerChatMessage();
-        message.setSender(incomeMessage.getSender());
-        message.setType(incomeMessage.getType());
+        // TODO: 009 09.05.20 временное решение, исправить
+        ChatMessage message;
 
         String sessionId = headerAccessor.getSessionId();
-        GameContent gameContent = gameService.processingCommand(incomeMessage.getContent(), sessionId);
-        message.setGameContent(gameContent);
 
-//        // TODO: 008 08.05.20 отделять личные сообщения от публичных
-//        ChatMessage chatMessage = new ChatMessage();
-//        chatMessage.setContent("confidential");
-//        messagingTemplate.convertAndSend("/topic/private/" + sessionId, chatMessage);
-////        messagingTemplate.convertAndSendToUser(sessionId, "/topic/public", chatMessage);
+        if (gameService.isGameStarted()) {
+//            делают ход (нападают, подкидывают, отбиваются, говорят "бито", говорят "пас")
+//            пытаются написать во время игры (не будучи игроком, не в свою очередь, не той картой)
+
+            gameService.processingCommand(incomeMessage.getContent(), sessionId);
+
+            Map<String, PrivateGameContent> privateContents = gameService.getPrivateContent();
+            for (Map.Entry<String, PrivateGameContent> privateGameContentEntry : privateContents.entrySet()) {
+                GameServerChatMessage chatMessage = new GameServerChatMessage();
+                chatMessage.setSender(incomeMessage.getSender());     // TODO: 009 09.05.20 не всегда нужно знать, кто был инициатором
+                chatMessage.setType(incomeMessage.getType());
+                chatMessage.setGameContent(privateGameContentEntry.getValue());
+                messagingTemplate.convertAndSend("/topic/private/" + privateGameContentEntry.getKey(), chatMessage);
+            }
+
+            message = new GameServerChatMessage(gameService.getPublicContent());
+            message.setType(ChatMessage.MessageType.GAME_MESSAGE);
+
+        } else if ("go".equalsIgnoreCase(incomeMessage.getContent())) {
+//            попытка начать игру
+
+            gameService.startGame();
+//            хода не было, можно сразу получать игровой контент
+
+            Map<String, PrivateGameContent> privateContents = gameService.getPrivateContent();
+            for (Map.Entry<String, PrivateGameContent> privateGameContentEntry : privateContents.entrySet()) {
+                GameServerChatMessage chatMessage = new GameServerChatMessage();
+                chatMessage.setSender(incomeMessage.getSender());
+                chatMessage.setType(incomeMessage.getType());
+                chatMessage.setGameContent(privateGameContentEntry.getValue());
+                messagingTemplate.convertAndSend("/topic/private/" + privateGameContentEntry.getKey(), chatMessage);
+            }
+
+            message = new GameServerChatMessage(gameService.getPublicContent());
+            message.setType(ChatMessage.MessageType.GAME_MESSAGE);
+
+        } else {
+//            просто болтают
+
+            // TODO: 009 09.05.20 временное решение, исправить
+            message = new ServerChatMessage(incomeMessage.getContent());
+            message.setType(ChatMessage.MessageType.MESSAGE);
+
+        }
+
+        message.setSender(incomeMessage.getSender());
 
         return message;
 
