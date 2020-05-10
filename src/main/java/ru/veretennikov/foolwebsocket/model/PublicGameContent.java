@@ -13,6 +13,7 @@ public class PublicGameContent extends GameContent {
     private int cardDeckSize;
     private int trumpSuit;
     private Card trump;
+    private Card reasonCard;
 
     @Override
     public String toString() {
@@ -20,7 +21,6 @@ public class PublicGameContent extends GameContent {
                 "cards=" + super.getCards() +
                 ", cardDeckSize=" + cardDeckSize +
                 ", trumpSuit=" + trumpSuit +
-                ", trump=" + trump +
                 '}';
     }
 

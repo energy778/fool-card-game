@@ -174,13 +174,25 @@ function onMessageReceived(payload) {
 
         messageElement.classList.add('chat-message');
 
-        let textElement = document.createElement('span');      // p
-        let messageText = document.createTextNode(message.gameContent.gameMessage);
+        let textElement;
+        let messageText;
+
+        textElement = document.createElement('span');      // p
+        messageText = document.createTextNode(message.gameContent.gameMessage);
         textElement.appendChild(messageText);
         messageElement.appendChild(textElement);
 
-        // и теперь нужно показать козырную карту
+        textElement = document.createElement('span');
+        messageText = document.createTextNode("Козырная карта: ");
+        textElement.appendChild(messageText);
+        messageElement.appendChild(textElement);
         showCards(Array.of(message.gameContent.trump), messageElement);
+
+        textElement = document.createElement('span');
+        messageText = document.createTextNode("Карта, определившая первый ход");
+        textElement.appendChild(messageText);
+        messageElement.appendChild(textElement);
+        showCards(Array.of(message.gameContent.reasonCard), messageElement);
 
     } else if (message.type === 'GAME_MESSAGE') {
         // игровое сообщение. может быть от пользователя
