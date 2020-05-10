@@ -36,6 +36,7 @@ function connect(event) {
         stompClient = Stomp.over(socket);
         stompClient.connect({}, function(frame) {
             sessionId = socket.sessionId;
+            console.log('sessionId: ' + sessionId);
             onConnected(frame);
         }, onError);
 
@@ -53,7 +54,6 @@ function onConnected(options) {
     stompClient.subscribe('/topic/game/errors', onGameExceptionMessageReceived);
     stompClient.subscribe('/topic/errors/' + sessionId, onExceptionMessageReceived);
     stompClient.subscribe('/topic/errors', onExceptionMessageReceived);
-    // добавить личных сообщений об ошибках
 
     // Tell your username to the server
     stompClient.send("/app/chat.addUser",
@@ -169,10 +169,22 @@ function onMessageReceived(payload) {
         textElement.appendChild(messageText);
         messageElement.appendChild(textElement);
 
+    } else if (message.type === 'START_GAME') {
+        // игровое сообщение. начало игры
+
+        messageElement.classList.add('chat-message');
+
+        let textElement = document.createElement('span');      // p
+        let messageText = document.createTextNode(message.gameContent.gameMessage);
+        textElement.appendChild(messageText);
+        messageElement.appendChild(textElement);
+
+        // и теперь нужно показать козырную карту
+        showCards(Array.of(message.gameContent.trump), messageElement);
+
     } else if (message.type === 'GAME_MESSAGE') {
         // игровое сообщение. может быть от пользователя
 
-        // пока что все скопировал из блока выше
         messageElement.classList.add('chat-message');
 
         let avatarElement = document.createElement('i');
@@ -186,8 +198,7 @@ function onMessageReceived(payload) {
         usernameElement.appendChild(usernameText);
         messageElement.appendChild(usernameElement);
 
-        let cards = message.gameContent.cards;
-        showCards(cards, messageElement);
+        showCards(message.gameContent.cards, messageElement);
 
     } else {
         return;

@@ -2,12 +2,14 @@ package ru.veretennikov.foolwebsocket.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.veretennikov.foolwebsocket.common.util.CardGenerate;
+import ru.veretennikov.foolwebsocket.common.util.CardDeckGenerator;
 import ru.veretennikov.foolwebsocket.exception.DurakGamePrivateException;
 import ru.veretennikov.foolwebsocket.model.*;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -21,8 +23,8 @@ public class DurakGameServiceImpl implements GameService {
     private boolean gameStarted;
     private CardDeck cardDeck;
 
-    private CardDeck initCardDeck() {
-        return CardGenerate.newCardDeck();
+    private void initCardDeck() {
+        this.cardDeck = CardDeckGenerator.newCardDeck();
     }
 
     private final Map<String, User> users = new HashMap();
@@ -67,9 +69,6 @@ public class DurakGameServiceImpl implements GameService {
         if (UserRole.PLAYER.equals(user.getRole()))
             endGame();
 
-        // TODO: 006 06.05.20 заканчивать игру, если пользователь был игроком, а не наблюдателем
-        //  сообщить о результатах и т.д. и т.п. не молча короче
-
         return username;
 
     }
@@ -77,32 +76,38 @@ public class DurakGameServiceImpl implements GameService {
     @Override
     public void processingCommand(String message, String userId) {
 
-////        фиктивный игровой контент
-//        GameContent content = new GameContent();
-
         // TODO: 007 07.05.20 пытаемся обработать сообщение как игровое
 //            но не забываем, что могут прислать всякую муру. такие сообщения (не индексы. просто игнорим)
 //            также тут нужны все проверки типа его ли ход и вот это вот всё
-        throw new DurakGamePrivateException("Попытка выполнить ход будет добавлена в следующих версиях", userId);
 
-//        return content;
+//        получаем карты на руках чувака
+//        получаем его роль на данный момент
+//        получаем свойство, чей сейчас ход
+//        анализируем присланное сообщение: либо индексы либо 0 (пасс/бита) если есть такая возможность
+//        иначе на хер
+
+        throw new DurakGamePrivateException("Попытка выполнить ход будет добавлена в следующих версиях", userId);
 
     }
 
     @Override
     public Map<String, PrivateGameContent> getPrivateContent() {
-        return users.entrySet().stream()
-                .filter(entry -> UserRole.PLAYER.equals(entry.getValue().getRole()))
-                .collect(
-                        HashMap::new,
-                        (map, entry) -> map.put(entry.getKey(), getCurrentPrivateGameContent(entry.getKey())),
-                        HashMap::putAll
-                );
+//        return users.entrySet().stream()
+//                .filter(entry -> UserRole.PLAYER.equals(entry.getValue().getRole()))
+//                .collect(
+//                        HashMap::new,
+//                        (map, entry) -> map.put(entry.getKey(), getCurrentPrivateGameContent(entry.getKey())),
+//                        HashMap::putAll
+//                );
+        return users.values().stream()
+                .filter(user -> UserRole.PLAYER.equals(user.getRole()))
+                .collect(Collectors.toMap(User::getId, user -> getCurrentPrivateGameContent(user.getId())));
+
     }
 
     @Override
     public PublicGameContent getPublicContent(String sessionId) {
-        return getCurrentPublicGameContent(sessionId);
+        return getStartPublicGameContent(sessionId);
     }
 
     private void initGame(String userId) {
@@ -110,7 +115,7 @@ public class DurakGameServiceImpl implements GameService {
         this.gameStarted = true;
 
 //        инициализируем колоду: весь набор карт, перетасовка, определение козыря
-        this.cardDeck = initCardDeck();
+        initCardDeck();
 
 //        выбираем игроков из списка пользователей
         int i = 1;
@@ -123,9 +128,8 @@ public class DurakGameServiceImpl implements GameService {
             i++;
         }
 
-        // TODO: 009 09.05.20 надо сказать, кто будет играть. потому что игроков может быть больше максимально допустимого
-
         // TODO: 007 07.05.20 жеребьевка и объявление результатов
+//        или через сервис или создать внутренний класс итератор
 
     }
 
@@ -147,7 +151,9 @@ public class DurakGameServiceImpl implements GameService {
     /**
      * получение публичного игрового контента
      **/
-    private PublicGameContent getCurrentPublicGameContent(String sessionId) {
+    private PublicGameContent getStartPublicGameContent(String sessionId) {
+
+//        нужно различать начало игры и уже непосредственный процесс
 
         PublicGameContent content = new PublicGameContent();
 
@@ -157,21 +163,27 @@ public class DurakGameServiceImpl implements GameService {
 //        количество оставшихся в колоде карт
         content.setCardDeckSize(cardDeck.size());
 
+//        козырная карта (в самом начале новой игры - чтобы отобразить ее один раз на игровом поле)
+        content.setTrump(cardDeck.getTrump());
+
 //        козырь
         content.setTrumpSuit(cardDeck.getTrumpSuit());
 
-//        иногда - козырная карта (в самом начале новой игры - чтобы отобразить ее один раз на игровом поле)
-        content.setTrump(cardDeck.getTrump());
-
-//        // TODO: 006 06.05.20 на время отладки
-////        log.debug("Возвращаемый контент: {}", content);
-//        System.out.println(String.format("Возвращаемый контент: %s", content));
+        content.setGameMessage(String.format("Игра началась. В колоде карт: %s. Козырь: ", cardDeck.size())
+                        + "\nСписок участников: " + users.values().stream()
+                                                        .filter(user -> UserRole.PLAYER.equals(user.getRole()))
+                                                        .map(User::getName)
+                                                        .collect(Collectors.joining(", "))
+                );
 
 //        чей ход
 //        сейчас ход защиты или нападения
 //          защищаться можно только если сейчас ход защиты
 //              а ход защиты до тех пор, пока есть на поле открытые пары
 //        атаковать и подкидывать можно в любое время до тех пор, пока не будет 6 пар на поле
+
+        // TODO: 006 06.05.20 на время отладки
+        System.out.println(String.format("Возвращаемый контент: %s", content));
 
         return content;
 

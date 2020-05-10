@@ -16,6 +16,7 @@ public abstract class ChatMessage {
     public enum MessageType {
         JOIN,
         MESSAGE,
+        START_GAME,
         GAME_MESSAGE,
         LEAVE
     }

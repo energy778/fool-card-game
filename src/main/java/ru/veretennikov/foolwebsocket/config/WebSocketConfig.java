@@ -15,22 +15,22 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     * как отправка сообщений пользователям, подписанным на тему, или отправка сообщений конкретному пользователю
     */
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws").withSockJS();
+    public void registerStompEndpoints(StompEndpointRegistry config) {
+        config.addEndpoint("/ws").withSockJS();
     }
 
     /**
      * настраиваем брокер сообщений, который будет использоваться для направления сообщений от одного клиента к другому
      */
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
+    public void configureMessageBroker(MessageBrokerRegistry config) {
 
 //        сообщения, чей адрес (куда отправлены) начинается с  “/app“, должны быть направлены в методы, занимающиеся обработкой сообщений (аннотированные @MessageMapping)
-        registry.setApplicationDestinationPrefixes("/app");
+        config.setApplicationDestinationPrefixes("/app");
 
 //        сообщения, чей адрес начинается с  “/topic“, должны быть направлены в брокер сообщений
 //        Брокер перенаправляет сообщения всем клиентам, подписанным на тему.
-        registry.enableSimpleBroker("/topic");   // Enables a simple in-memory broker
+        config.enableSimpleBroker("/topic");   // Enables a simple in-memory broker
 
     }
 

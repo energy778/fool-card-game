@@ -81,7 +81,7 @@ public class GameController {
             sendPrivateGameContent(incomeMessage);
 
             message = new GameServerChatMessage(gameService.getPublicContent(sessionId));
-            message.setType(ChatMessage.MessageType.GAME_MESSAGE);
+            message.setType(ChatMessage.MessageType.START_GAME);
 
         } else {
 //            просто болтают

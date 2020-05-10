@@ -12,6 +12,8 @@ public class User {
     private String id;
     private String name;
     private UserRole role;
+
+    private PlayerType playerType;
     private Hand hand;
 
     public User(String id, String name) {

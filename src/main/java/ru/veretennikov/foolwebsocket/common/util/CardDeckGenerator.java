@@ -7,7 +7,7 @@ import ru.veretennikov.foolwebsocket.model.Rank;
 import static java.util.Collections.shuffle;
 
 // TODO: 004 04.05.20 можно переписать на спринг бин (сервис)
-public class CardGenerate {
+public class CardDeckGenerator {
 
     private static final int[] suits = new int[]{0,1,2,3};
     private static final Rank[] ranks = Rank.values();
