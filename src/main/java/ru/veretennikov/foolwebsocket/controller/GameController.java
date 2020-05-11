@@ -16,11 +16,13 @@ import ru.veretennikov.foolwebsocket.core.model.ServerChatMessage;
 import ru.veretennikov.foolwebsocket.exception.GameException;
 import ru.veretennikov.foolwebsocket.exception.GamePrivateException;
 import ru.veretennikov.foolwebsocket.exception.PrivateException;
+import ru.veretennikov.foolwebsocket.model.GameContent;
 import ru.veretennikov.foolwebsocket.model.PrivateGameContent;
+import ru.veretennikov.foolwebsocket.model.PublicGameContent;
 import ru.veretennikov.foolwebsocket.service.GameService;
 import ru.veretennikov.foolwebsocket.service.GreetingService;
 
-import java.util.Map;
+import java.util.List;
 
 @Slf4j
 @Controller
@@ -53,11 +55,7 @@ public class GameController {
     }
 
     @MessageMapping("/chat.sendMessage")
-    @SendTo("/topic/public")
-    public ChatMessage sendMessage(@Payload ClientChatMessage incomeMessage, SimpMessageHeaderAccessor headerAccessor) {
-
-        // TODO: 009 09.05.20 временное решение, исправить
-        ChatMessage message = new ServerChatMessage("");
+    public void sendMessageHandler(@Payload ClientChatMessage incomeMessage, SimpMessageHeaderAccessor headerAccessor) {
 
         String sessionId = headerAccessor.getSessionId();
 
@@ -66,47 +64,30 @@ public class GameController {
 //            пытаются написать во время игры (не будучи игроком, не в свою очередь, не той картой)
 
             gameService.processingCommand(incomeMessage.getContent(), sessionId);
-
-            sendPrivateGameContent(incomeMessage);
-
-            message = new GameServerChatMessage(gameService.getPublicContent(sessionId));
-            message.setType(ChatMessage.MessageType.GAME_MESSAGE);
+            sendMessages(incomeMessage, ChatMessage.MessageType.GAME_MESSAGE, gameService.getContent(sessionId));
 
         } else if ("go".equalsIgnoreCase(incomeMessage.getContent())) {
 //            попытка начать игру
 
             gameService.startGame(sessionId);
-//            хода не было, можно сразу получать игровой контент
-
-            sendPrivateGameContent(incomeMessage);
-
-            message = new GameServerChatMessage(gameService.getPublicContent(sessionId));
-            message.setType(ChatMessage.MessageType.START_GAME);
+//            хода не было, можно сразу получать игровой контент и рассылать сообщения
+            sendMessages(incomeMessage, ChatMessage.MessageType.START_GAME, gameService.getContent(sessionId));
 
         } else {
-//            просто болтают
-
-            message = new ServerChatMessage(incomeMessage.getContent());
-            message.setType(ChatMessage.MessageType.MESSAGE);
-
+            sendMessages(incomeMessage, ChatMessage.MessageType.MESSAGE, null);
         }
-
-        message.setSender(incomeMessage.getSender());
-
-        return message;
 
     }
 
-    private void sendPrivateGameContent(ClientChatMessage incomeMessage) {
-        Map<String, PrivateGameContent> privateContents = gameService.getPrivateContent();
-        for (Map.Entry<String, PrivateGameContent> privateGameContentEntry : privateContents.entrySet()) {
-            GameServerChatMessage chatMessage = new GameServerChatMessage();
-            chatMessage.setSender(incomeMessage.getSender());                       // TODO: 009 09.05.20 не всегда нужно знать, кто был инициатором
-            chatMessage.setType(ChatMessage.MessageType.GAME_MESSAGE);
-            chatMessage.setGameContent(privateGameContentEntry.getValue());
-//            messagingTemplate.convertAndSendToUser(privateGameContentEntry.getKey(), "/topic/private/", chatMessage);     // не взлетает в разных вариациях, надоело бороться
-            messagingTemplate.convertAndSend("/topic/private/" + privateGameContentEntry.getKey(), chatMessage);
-        }
+    @MessageExceptionHandler
+    @SendTo(value = "/topic/errors")
+    public String exceptionHandler(RuntimeException e) {
+        return e.getMessage();
+    }
+
+    @MessageExceptionHandler
+    public void privateExceptionHandler(PrivateException privateException) {
+        messagingTemplate.convertAndSend("/topic/game/errors/" + privateException.getSessionId(), privateException.getMessage());
     }
 
     @MessageExceptionHandler
@@ -120,15 +101,58 @@ public class GameController {
         messagingTemplate.convertAndSend("/topic/game/errors/" + privateException.getSessionId(), privateException.getMessage());
     }
 
-    @MessageExceptionHandler
-    @SendTo(value = "/topic/errors")
-    public String exceptionHandler(RuntimeException e) {
-        return e.getMessage();
+
+    private void sendMessages(@Payload ClientChatMessage incomeMessage, ChatMessage.MessageType messageType, List<GameContent> gameContents) {
+
+        if (gameContents == null){
+
+//            просто болтают
+            ServerChatMessage chatMessage = new ServerChatMessage(incomeMessage.getContent());
+            chatMessage.setType(messageType);
+            chatMessage.setSender(incomeMessage.getSender());
+            sendPublicMessage(chatMessage);
+
+        } else {
+
+            for (GameContent gameContent : gameContents) {
+                // TODO: 011 11.05.20 разделить игровой контент на стартовый и нестартовый
+//                PrivateGameContent и PublicGameContent разделить на стартовы и нет
+                if (gameContent instanceof PrivateGameContent){
+                    buildSendPrivateMessage(gameContent, incomeMessage, messageType);
+                } else if (gameContent instanceof PublicGameContent) {
+                    buildSendPublicMessage(gameContent, incomeMessage, messageType);
+                } else {
+//                nothing yet
+                }
+            }
+
+        }
+
     }
 
-    @MessageExceptionHandler
-    public void privateExceptionHandler(PrivateException privateException) {
-        messagingTemplate.convertAndSend("/topic/game/errors/" + privateException.getSessionId(), privateException.getMessage());
+    private void buildSendPublicMessage(GameContent gameContent, ClientChatMessage incomeMessage, ChatMessage.MessageType messageType) {
+        GameServerChatMessage chatMessage = new GameServerChatMessage();
+        chatMessage.setType(messageType);
+        chatMessage.setSender(incomeMessage.getSender());
+        chatMessage.setGameContent(gameContent);
+        sendPublicMessage(chatMessage);
+    }
+
+    private void buildSendPrivateMessage(GameContent gameContent, ClientChatMessage incomeMessage, ChatMessage.MessageType messageType) {
+        GameServerChatMessage chatMessage = new GameServerChatMessage();
+        chatMessage.setSender(incomeMessage.getSender());         // TODO: 009 09.05.20 не всегда нужно знать, кто был инициатором. но пока оставим это на усмотрение фронта
+        chatMessage.setType(messageType);
+        chatMessage.setGameContent(gameContent);
+//        messagingTemplate.convertAndSendToUser(((PrivateGameContent) gameContent).getUserId(), "/topic/private/", chatMessage);     // не взлетает в разных вариациях, надоело бороться
+        sendMessage("/topic/private/" + ((PrivateGameContent) gameContent).getUserId(), chatMessage);
+    }
+
+    private void sendPublicMessage(ChatMessage chatMessage) {
+        sendMessage("/topic/public", chatMessage);
+    }
+
+    private void sendMessage(String sendTo, ChatMessage chatMessage) {
+        messagingTemplate.convertAndSend(sendTo, chatMessage);
     }
 
 }

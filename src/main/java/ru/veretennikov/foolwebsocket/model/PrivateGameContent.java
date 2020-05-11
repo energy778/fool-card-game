@@ -8,5 +8,5 @@ import lombok.Setter;
 @Getter
 @NoArgsConstructor
 public class PrivateGameContent extends GameContent{
-//    пока что только карты на руках. cards - от родительского
+    private String userId;
 }

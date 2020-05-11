@@ -124,9 +124,11 @@ function onPrivateMessageReceived(payload) {
 
     messageElement.classList.add('chat-message');
 
-    if(message.type === 'GAME_MESSAGE') {
+    if(message.type === 'START_GAME') {
         let cards = message.gameContent.cards;
         showCards(cards, messageElement);
+    } else if(message.type === 'GAME_MESSAGE') {
+        // nothing yet
     } else {
         return;
     }

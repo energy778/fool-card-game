@@ -24,10 +24,11 @@ public class DurakGameServiceImpl implements GameService {
     private boolean gameStarted;
     private CardDeck cardDeck;
     private Card reasonCard;
+    private PlayerIterator playerIterator;
+
     private User curAttacker;
     private User curDefender;
     private User curSubattacker;
-    private PlayerIterator playerIterator;
 
     // TODO: 011 11.05.20 нужны еще поля:
 //        чей ход: сейчас ход защиты или нападения
@@ -100,11 +101,19 @@ public class DurakGameServiceImpl implements GameService {
 //        иначе на хер
 
         throw new DurakGamePrivateException("Попытка выполнить ход будет добавлена в следующих версиях", userId);
+//        если чувак пытается сделать ход, когда игра уже началась, но он не является участником
+//        throw new DurakGamePrivateException("Игра уже началась. Подождите окончания игры. Спасибо", userId);
 
     }
 
     @Override
-    public Map<String, PrivateGameContent> getPrivateContent() {
+    public List<GameContent> getContent(String userId) {
+
+        ArrayList<GameContent> content = new ArrayList<>();
+
+        PublicGameContent publicContent = getStartPublicGameContent(userId);
+        content.add(publicContent);
+
 //        return users.entrySet().stream()
 //                .filter(entry -> UserRole.PLAYER.equals(entry.getValue().getRole()))
 //                .collect(
@@ -112,15 +121,64 @@ public class DurakGameServiceImpl implements GameService {
 //                        (map, entry) -> map.put(entry.getKey(), getCurrentPrivateGameContent(entry.getKey())),
 //                        HashMap::putAll
 //                );
-        return users.values().stream()
+        List<PrivateGameContent> privateContent = users.values().stream()
                 .filter(user -> UserRole.PLAYER.equals(user.getRole()))
-                .collect(Collectors.toMap(User::getId, user -> getCurrentPrivateGameContent(user.getId())));
+                .map(user -> getCurrentPrivateGameContent(user.getId()))
+                .collect(Collectors.toList());
+        content.addAll(privateContent);
+
+        return content;
     }
 
-    @Override
-    public PublicGameContent getPublicContent(String userId) {
-        return getStartPublicGameContent(userId);
+    /**
+     * получение приватного игрового контента пользователя
+     **/
+    private PrivateGameContent getCurrentPrivateGameContent(String userId) {
+
+        PrivateGameContent content = new PrivateGameContent();
+        content.setUserId(userId);
+        content.setGameMessage("Ваши карты (эту строку видите только вы): ");
+        content.setCards(users.get(userId).getCards());
+        return content;
+
     }
+
+    /**
+     * получение публичного стартового игрового контента
+     **/
+    private PublicGameContent getStartPublicGameContent(String userId) {
+
+//        нужно различать начало игры и уже непосредственный процесс
+
+        PublicGameContent content = new PublicGameContent();
+
+//        количество оставшихся в колоде карт
+        content.setCardDeckSize(cardDeck.size());
+
+//        козырная карта (в самом начале новой игры - чтобы отобразить ее один раз на игровом поле)
+        content.setTrump(cardDeck.getTrump());
+
+//        карта, которая победила в жеребьевке
+        content.setReasonCard(reasonCard);
+
+//        козырная масть
+        content.setTrumpSuit(cardDeck.getTrumpSuit());
+
+        content.setGameMessage(String.format("Игра началась. В колоде карт: %s. ", cardDeck.size())
+                + "\n Список участников: " + users.values().stream()
+                .filter(user -> UserRole.PLAYER.equals(user.getRole()))
+                .map(User::getName)
+                .sorted()
+                .collect(Collectors.joining(", "))
+                + "\n Ходит: " + curAttacker.getName()
+                + "\n Защищается: " + curDefender.getName()
+                + ((curSubattacker != null) ? "\n Подкидывает: " + curSubattacker.getName() : "")
+        );
+
+        return content;
+
+    }
+
 
 
     /**
@@ -238,53 +296,6 @@ public class DurakGameServiceImpl implements GameService {
 
     }
 
-    /**
-     * получение приватного игрового контента пользователя
-     **/
-    private PrivateGameContent getCurrentPrivateGameContent(String userId) {
-
-        PrivateGameContent content = new PrivateGameContent();
-        content.setCards(users.get(userId).getCards());
-        content.setGameMessage("Ваши карты (эту строку видите только вы): ");
-        return content;
-
-    }
-
-    /**
-     * получение публичного стартового игрового контента
-     **/
-    private PublicGameContent getStartPublicGameContent(String userId) {
-
-//        нужно различать начало игры и уже непосредственный процесс
-
-        PublicGameContent content = new PublicGameContent();
-
-//        количество оставшихся в колоде карт
-        content.setCardDeckSize(cardDeck.size());
-
-//        козырная карта (в самом начале новой игры - чтобы отобразить ее один раз на игровом поле)
-        content.setTrump(cardDeck.getTrump());
-
-//        карта, которая победила в жеребьевке
-        content.setReasonCard(reasonCard);
-
-//        козырная масть
-        content.setTrumpSuit(cardDeck.getTrumpSuit());
-
-        content.setGameMessage(String.format("Игра началась. В колоде карт: %s. ", cardDeck.size())
-                        + "\n Список участников: " + users.values().stream()
-                                                        .filter(user -> UserRole.PLAYER.equals(user.getRole()))
-                                                        .map(User::getName)
-                                                        .sorted()
-                                                        .collect(Collectors.joining(", "))
-                        + "\n Ходит: " + curAttacker.getName()
-                        + "\n Защищается: " + curDefender.getName()
-                        + ((curSubattacker != null) ? "\n Подкидывает: " + curSubattacker.getName() : "")
-        );
-
-        return content;
-
-    }
 
 
     /**
