@@ -128,7 +128,8 @@ function onPrivateMessageReceived(payload) {
         let cards = message.gameContent.cards;
         showCards(cards, messageElement);
     } else if(message.type === 'GAME_MESSAGE') {
-        // nothing yet
+        let cards = message.gameContent.cards;
+        showCards(cards, messageElement);
     } else {
         return;
     }
@@ -201,18 +202,24 @@ function onMessageReceived(payload) {
 
         messageElement.classList.add('chat-message');
 
-        let avatarElement = document.createElement('i');
-        let avatarText = document.createTextNode(message.sender[0]);
-        avatarElement.appendChild(avatarText);
-        avatarElement.style['background-color'] = getAvatarColor(message.sender);
-        messageElement.appendChild(avatarElement);
-
-        let usernameElement = document.createElement('span');
-        let usernameText = document.createTextNode(message.sender);
-        usernameElement.appendChild(usernameText);
-        messageElement.appendChild(usernameElement);
-
         showCards(message.gameContent.cards, messageElement);
+
+        if (message.gameContent.cardStep !== null){
+
+            let avatarElement = document.createElement('i');
+            let avatarText = document.createTextNode(message.sender[0]);
+            avatarElement.appendChild(avatarText);
+            avatarElement.style['background-color'] = getAvatarColor(message.sender);
+            messageElement.appendChild(avatarElement);
+
+            let usernameElement = document.createElement('span');
+            let usernameText = document.createTextNode(message.sender);
+            usernameElement.appendChild(usernameText);
+            messageElement.appendChild(usernameElement);
+
+            showCards(Array.of(message.gameContent.cardStep), messageElement);
+
+        }
 
     } else {
         return;

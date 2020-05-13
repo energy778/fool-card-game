@@ -4,15 +4,20 @@ import ru.veretennikov.foolwebsocket.model.Card;
 import ru.veretennikov.foolwebsocket.model.CardDeck;
 import ru.veretennikov.foolwebsocket.model.Rank;
 
+import java.util.Arrays;
+import java.util.List;
+
 import static java.util.Collections.shuffle;
 
-// TODO: 004 04.05.20 можно переписать на спринг бин (сервис)
 public class CardDeckGenerator {
 
     private static final int[] suits = new int[]{0,1,2,3};
     private static final Rank[] ranks = Rank.values();
 
-    public static CardDeck newCardDeck() {
+    public static CardDeck newCardDeck(List<Rank> ranks) {
+
+        if (ranks == null)
+            ranks = Arrays.asList(CardDeckGenerator.ranks);
 
         CardDeck cardDeck = new CardDeck();
 

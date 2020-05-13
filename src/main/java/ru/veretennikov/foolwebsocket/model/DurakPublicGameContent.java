@@ -7,13 +7,13 @@ import lombok.Setter;
 @Setter
 @Getter
 @NoArgsConstructor
-public class PublicGameContent extends GameContent {
+public class DurakPublicGameContent extends GameContent {
 
     private int turn;
     private int cardDeckSize;
     private int trumpSuit;
     private Card trump;
-    private Card reasonCard;
+    private DurakGameEvent gameEvent;
 
     @Override
     public String toString() {

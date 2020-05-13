@@ -11,8 +11,7 @@ public interface GameService {
 
     boolean isGameStarted();
     void startGame(String sessionId);
-    void processingCommand(String content, String userId);
-
+    void checkCommand(String content, String userId);
     List<GameContent> getContent(String userId);
 
 }

@@ -4,5 +4,6 @@ public enum PlayerType {
     ATTACKER,
     SUBATTACKER,
     DEFENDER,
-    OBSERVER
+    OBSERVER,
+    FINISHER
 }

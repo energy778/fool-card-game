@@ -10,32 +10,68 @@ import ru.veretennikov.foolwebsocket.model.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static ru.veretennikov.foolwebsocket.model.DurakGameEvent.*;
+import static ru.veretennikov.foolwebsocket.model.PlayerType.*;
+import static ru.veretennikov.foolwebsocket.model.Rank.*;
+import static ru.veretennikov.foolwebsocket.model.UserRole.*;
+
 @Slf4j
 @Service
 public class DurakGameServiceImpl implements GameService {
 
-    private final int MAX_NUM_CARD_ON_HAND = 6;
+    private final int MAX_NUM_CARD_IN_HAND = 6;
+    private final int MAX_NUM_CARD_ON_FIELD = 6;
 
     private final int MIN_NUM_PLAYERS = 2;
     private final int MAX_NUM_PLAYERS = 6;
 
     private final Map<String, User> users = new HashMap();
 
+    private final List<Rank> ranks = Arrays.asList(SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE);
+
     private boolean gameStarted;
+    private int round;
+    private boolean roundBegun;
+    private DurakGameEvent gameEvent;
+    private Field field;
     private CardDeck cardDeck;
     private Card reasonCard;
     private PlayerIterator playerIterator;
+    private Card curCard;
 
+    private User curPlayer;     // атакующий или защитник, ход которого ожидается в настоящий момент
     private User curAttacker;
     private User curDefender;
     private User curSubattacker;
+    private User curWinner;
 
-    // TODO: 011 11.05.20 нужны еще поля:
-//        чей ход: сейчас ход защиты или нападения
-//          защищаться можно только если сейчас ход защиты
-//              а ход защиты до тех пор, пока есть на поле открытые пары
-//        атаковать и подкидывать можно в любое время до тех пор, пока не будет 6 пар на поле
+    @Override
+    public void addUser(String username, String userId) {
 
+        User newUser = new User(userId, username);
+        newUser.setRole(GUEST);
+        users.put(userId, newUser);
+
+        System.out.println(String.format("%s вошел в игру", username));
+        System.out.println(String.format("Список всех игроков: %s", users));
+
+    }
+
+    @Override
+    public String removeUser(String userId) {
+
+        User user = users.remove(userId);
+        String username = user.getName();
+
+        System.out.println(String.format("%s вышел из игры", username));
+        System.out.println(String.format("Список всех игроков: %s", users));        // отладить баг: java.util.ConcurrentModificationException: null
+
+        if (PLAYER.equals(user.getRole()))
+            endGame();
+
+        return username;
+
+    }
 
     @Override
     public boolean isGameStarted() {
@@ -56,53 +92,137 @@ public class DurakGameServiceImpl implements GameService {
 
     }
 
-    @Override
-    public void addUser(String username, String userId) {
-
-        User newUser = new User(userId, username);
-        newUser.setRole(UserRole.GUEST);
-        users.put(userId, newUser);
-
-        System.out.println(String.format("%s вошел в игру", username));
-        System.out.println(String.format("Список всех игроков: %s", users));
-
-    }
-
-    @Override
-    public String removeUser(String userId) {
-
-        User user = users.remove(userId);
-        String username = user.getName();
-
-        System.out.println(String.format("%s вышел из игры", username));
-        System.out.println(String.format("Список всех игроков: %s", users));        // отладить баг: java.util.ConcurrentModificationException: null
-
-        if (UserRole.PLAYER.equals(user.getRole()))
-            endGame();
-
-        return username;
-
-    }
-
     /**
-     * выполнение хода
+     * анализ пришедшей команды
      **/
     @Override
-    public void processingCommand(String message, String userId) {
+    public void checkCommand(String message, String userId) {
 
-        // TODO: 007 07.05.20 пытаемся обработать сообщение как игровое
-//            но не забываем, что могут прислать всякую муру. такие сообщения (не индексы. просто игнорим)
-//            также тут нужны все проверки типа его ли ход и вот это вот всё
+        // TODO: 012 12.05.20 переписать на нормальный логгер
+        System.out.println(String.format("Income id: %s, message: %s", message, userId));
 
-//        получаем карты на руках чувака
-//        получаем его роль на данный момент
-//        получаем свойство, чей сейчас ход
-//        анализируем присланное сообщение: либо индексы либо 0 (пасс/бита) если есть такая возможность
-//        иначе на хер
+        gameEvent = NO_GAME;
+        this.curCard = null;
+        this.curWinner = null;
+        boolean stepCompleted = false;
 
-        throw new DurakGamePrivateException("Попытка выполнить ход будет добавлена в следующих версиях", userId);
-//        если чувак пытается сделать ход, когда игра уже началась, но он не является участником
-//        throw new DurakGamePrivateException("Игра уже началась. Подождите окончания игры. Спасибо", userId);
+        User initiator = users.get(userId);
+        if (initiator == null)
+            throw new DurakGameException("Не удалось идентифицировать пользователя, приславшего сообщение");
+        if (!PLAYER.equals(initiator.getRole()))
+            throw new DurakGamePrivateException("В данный момент игра уже идёт. Дождитесь ее окончания и присоединяйтесь к новой игре. Спасибо", userId);
+
+        PlayerType initiatorPlayerType = initiator.getPlayerType();
+        if (FINISHER.equals(initiatorPlayerType))
+            throw new DurakGamePrivateException("Вы не можете сделать ход, так как вышли из игры. Дождитесь ее окончания и присоединяйтесь к новой", userId);
+        if (OBSERVER.equals(initiatorPlayerType)
+                || DEFENDER.equals(initiatorPlayerType) && !curPlayer.equals(curDefender)
+                || curPlayer.equals(curSubattacker) && !roundBegun)
+//                || ATTACKER.equals(initiatorPlayerType) && !curPlayer.equals(curAttacker)      // комм.: атакующий может подкидывать и далее
+            throw new DurakGamePrivateException("Вы не можете сделать ход, дождитесь своей очереди", userId);
+
+        int index;
+
+        // TODO: 011 11.05.20  пока что условимся, что ходить можно только по одной карте
+        try {
+            index = Integer.parseInt(message);
+            if (index < 0)
+                throw new DurakGamePrivateException("Некорректный ввод. Введено отрицательное число", userId);
+        } catch (NumberFormatException e) {
+            throw new DurakGamePrivateException("Некорректный ввод. Введите порядковый номер карты, начиная с 1 или 0 (опционально)", userId);
+        }
+
+//        stepCompleted = true - выставляется только в том случае, если ход совершён, и нужно отправить контент
+
+        Pair curOpenPair = null;
+
+        if (initiator.equals(curSubattacker)){
+//            пытаемся подкинуть карты
+
+            checkSubattack(userId, initiator, index);
+
+            gameEvent = SUBATT_STEP;
+            stepCompleted = true;
+
+        } else {
+            if (initiator.equals(curAttacker)){
+    //            пытаемся атаковать
+
+                if (roundBegun){
+
+                    if (index == 0){
+
+                        if (field.getOpenPairs().size() != 0)
+                            throw new DurakGamePrivateException("Вы не можете завершить раунд, на поле еще есть открытые пары", userId);
+
+                        gameEvent = DEF_PASS;
+
+                    } else {
+
+                        checkSubattack(userId, initiator, index);
+                        gameEvent = ATT_STEP;
+
+                    }
+
+                } else {
+
+                    if (index > initiator.getCards().size() || index == 0)
+                        throw new DurakGamePrivateException("Некорректный ввод. Введите порядковый номер карты, начиная с 1", userId);
+
+                    gameEvent = ATT_STEP;
+
+                }
+
+                stepCompleted = true;
+
+            } else if (initiator.equals(curDefender)){
+    //            пытаемся защититься
+
+                List<Pair> openPairs = field.getOpenPairs();
+                if (openPairs.size() == 0)
+                    throw new DurakGamePrivateException("На поле нет открытых пар. Сейчас ход атаки", userId);  // никогда не ожидаемо
+
+                if (index == 0){
+
+                    gameEvent = DEF_FALL;
+
+                } else {
+    //                отбиваемся
+
+                    if (index > initiator.getCards().size())
+                        throw new DurakGamePrivateException("Некорректный ввод. Введите порядковый номер карты, начиная с 1", userId);
+
+                    Card cardDefender = initiator.getCards().get(index - 1);
+                    boolean step = false;
+
+                    for (Pair openPair : openPairs) {
+                        Card cardAttacker = openPair.getAttacker();
+
+                        // TODO: 013 13.05.20 сначала отбивайся некозырными :)
+                        if (cardDefender.isTrump() && !cardAttacker.isTrump()
+                                || cardDefender.getSuit() == cardAttacker.getSuit() && cardDefender.getRank().ordinal() > cardAttacker.getRank().ordinal()){
+                            curOpenPair = openPair;
+                            step = true;
+                            break;
+                        }
+                    }
+
+                    if (!step)
+                        throw new DurakGamePrivateException("Вы не можете отбить выбранной картой ни одну карту на поле. Введите порядковый номер карты, начиная с 1 или 0 для получения карт с поля", userId);
+
+                    gameEvent = DEF_STEP;
+
+                }
+
+                stepCompleted = true;
+
+            } else {
+                throw new DurakGameException(String.format("Не удалось идентифицировать пользователя, приславшего сообщение: %s", initiator));
+            }
+        }
+
+        if (stepCompleted)
+            processingStep(userId, initiator, index, curOpenPair);
 
     }
 
@@ -111,24 +231,406 @@ public class DurakGameServiceImpl implements GameService {
 
         ArrayList<GameContent> content = new ArrayList<>();
 
-        PublicGameContent publicContent = getStartPublicGameContent(userId);
-        content.add(publicContent);
+        if (round == 1) {
 
-//        return users.entrySet().stream()
-//                .filter(entry -> UserRole.PLAYER.equals(entry.getValue().getRole()))
-//                .collect(
-//                        HashMap::new,
-//                        (map, entry) -> map.put(entry.getKey(), getCurrentPrivateGameContent(entry.getKey())),
-//                        HashMap::putAll
-//                );
-        List<PrivateGameContent> privateContent = users.values().stream()
-                .filter(user -> UserRole.PLAYER.equals(user.getRole()))
-                .map(user -> getCurrentPrivateGameContent(user.getId()))
-                .collect(Collectors.toList());
-        content.addAll(privateContent);
+            DurakPublicStartGameContent publicContent = getStartPublicGameContent(userId);
+            content.add(publicContent);
+
+            List<PrivateGameContent> privateContent = users.values().stream()
+                    .filter(user -> PLAYER.equals(user.getRole()))
+                    .map(user -> getCurrentPrivateGameContent(user.getId()))
+                    .collect(Collectors.toList());
+            content.addAll(privateContent);
+
+        } else {
+
+            if (gameEvent == null || NO_GAME.equals(gameEvent))
+                return Collections.emptyList();
+
+            if (gameStarted){
+
+                if (roundBegun){
+
+                    DurakPublicCurrentGameContent publicContent = new DurakPublicCurrentGameContent();
+                    publicContent.setCardStep(curCard);
+                    publicContent.setGameEvent(gameEvent);
+                    publicContent.setGameMessage(users.get(userId).getName());
+                    content.add(publicContent);
+
+                    content.add(getCurrentPrivateGameContent(userId));
+
+                } else {
+
+                    DurakPublicCurrentGameContent publicContent = new DurakPublicCurrentGameContent();
+                    publicContent.setCardStep(curCard);
+                    publicContent.setGameEvent(gameEvent);
+                    publicContent.setGameMessage(users.get(userId).getName());
+                    content.add(publicContent);
+
+                    List<PrivateGameContent> privateContents = users.values().stream()
+                            .filter(user -> PLAYER.equals(user.getRole()))
+                            .map(user -> getCurrentPrivateGameContent(user.getId()))
+                            .collect(Collectors.toList());
+                    content.addAll(privateContents);
+
+                    DurakPublicCurrentGameContent publicContentAfter = new DurakPublicCurrentGameContent();
+                    publicContentAfter.setCardStep(null);
+                    publicContentAfter.setGameEvent(gameEvent);
+                    String eventString = "";
+                    if (DEF_PASS.equals(gameEvent))
+                        eventString = "Бито";
+                    else if (DEF_FALL.equals(gameEvent))
+                        eventString = "защита отбилась";
+                    else if (DEF_STEP.equals(gameEvent))
+                        eventString = "защита вышла из игры";
+                    else
+                        throw new DurakGameException(String.format("Не удалось определить текстовое представление события окончания раунда", gameEvent));
+                    publicContentAfter.setGameMessage(String.format("Раунд завершён: %s. " + "Начался новый раунд: %s", eventString, round));
+                    content.add(publicContentAfter);
+
+                }
+
+            } else {
+
+//            Игра завершена
+
+                DurakPublicGameContent endContent = new DurakPublicGameContent();
+                endContent.setCardDeckSize(0);
+                endContent.setTrump(null);
+                endContent.setTrumpSuit(0);
+                endContent.setGameMessage(String.format("Игра завершена, проиграл %s", curPlayer));
+                content.add(endContent);
+
+                List<PrivateGameContent> privateContents = users.values().stream()
+                        .filter(user -> PLAYER.equals(user.getRole()))
+                        .map(user -> getCurrentPrivateGameContent(user.getId()))
+                        .collect(Collectors.toList());
+                content.addAll(privateContents);
+
+            }
+
+        }
 
         return content;
+
     }
+
+
+
+
+    /**
+     * инициализация новой игры:
+     *   инициализируем колоду: набор карт, перетасовка, определение козыря
+     *   жеребьевка
+     *   инициализация итератора
+     *   определение ролей/типов всех остальных игроков
+     **/
+    private void initGame(String userId) {
+
+        this.gameStarted = true;
+        this.cardDeck = CardDeckGenerator.newCardDeck(ranks);
+        toss();
+        playerIterator = new PlayerIterator();  // итератор имеет смысл инициализировать только после определения атакующего: от него будет идти отсчет
+        classification();
+        round = 1;
+        field = new Field();
+        roundBegun = false;
+
+    }
+
+    /**
+     * жеребьевка: определение игроков из списка всех пользователей, карты, определяющей первый ход, игрока, делающего первый ход (атакующего)
+     **/
+    private void toss() {
+
+        int i = 1;
+        for (User user : users.values()) {
+            user.setRole(PLAYER);
+            user.pickCards(this.cardDeck, MAX_NUM_CARD_IN_HAND);
+            if (i == MAX_NUM_PLAYERS) {
+                break;
+            }
+            i++;
+        }
+
+        reasonCard = users.values().stream()
+                .filter(user -> PLAYER.equals(user.getRole()))
+                .flatMap(user -> user.getCards().stream())
+                .reduce((card, card2) -> {
+//                    жеребьевка: наименьшая козырная -> наименьшая некозырная -> любая
+                    if (card.isTrump() && card2.isTrump())
+                        return card.getRank().ordinal() < card2.getRank().ordinal() ? card : card2;
+                    if (card.isTrump())
+                        return card;
+                    if (card2.isTrump())
+                        return card2;
+                    return card.getRank().ordinal() < card2.getRank().ordinal() ? card : card2;
+                }).orElseThrow(() -> new DurakGameException("Ошибка жеребьёвки: не удалось определить карту, определяющую первый ход"));
+
+        curAttacker = users.values().stream()
+                .filter(user -> user.getCards().contains(reasonCard))
+                .findFirst().orElseThrow(() -> new DurakGameException("Ошибка жеребьёвки: не удалось определить принадлежность карты, определяющей первый ход"));
+
+        curAttacker.setPlayerType(ATTACKER);
+        curPlayer = curAttacker;
+
+    }
+
+    /**
+     * определение ролей/типов всех игроков по атакующему игроку и итератору
+     *      предполагается вызывать эту функцию, когда определен атакующий и обнулены другие роли
+     *      (не может быть два атакующих, поэтому все старые типы игроков логичнее затирать ПРИ ПОЛУЧЕНИИ НОВОГО АТАКУЮЩЕГО, в конце раунда)
+     *         на атакующего указывает итератор
+     *         следующий за ним будет защитник
+     *         следующий - подкидывающий
+     *         остальные - наблюдатели
+     **/
+    private void classification() {
+
+        if (users.values().stream()
+                .filter(user -> ATTACKER.equals(user.getPlayerType()))
+                .count() != 1)
+            throw new DurakGameException("Классификация игроков невозможна. Должен быть всего лишь один атакующий игрок");
+
+        // TODO: 012 12.05.20 в самом начале очищать все роли игроков кроме атакующего (и вышедших), которого установили только что! ни хера! ведь мы не очистили предыдущего атакующего! или брать по curAttacker? исключить его а потом присвоить ему роль и присвоить остальные роли другим чувакам
+        if (users.values().stream().anyMatch(user -> PLAYER.equals(user.getRole())
+                && !ATTACKER.equals(user.getPlayerType())
+                && !FINISHER.equals(user.getPlayerType())
+                && user.getPlayerType() != null))
+            throw new DurakGameException("Классификация игроков невозможна. Типы всех игроков, кроме атакующего и завершивших игру, должны быть очищены");
+
+        curDefender = playerIterator.peekNextX(1);
+        curDefender.setPlayerType(DEFENDER);
+
+        curSubattacker = playerIterator.peekNextX(2);
+        if (!curAttacker.equals(curSubattacker))
+            curSubattacker.setPlayerType(SUBATTACKER);
+        else
+            curSubattacker = null;
+//            если найденный подкидывающий и есть атакующий (играют всего два человека), то тип игрока не меняем
+
+        users.forEach((s, user) -> {
+//            для оптимизации (ленивая инициализация)
+            if (user.equals(curAttacker) || user.equals(curDefender) || user.equals(curSubattacker) || FINISHER.equals(user.getPlayerType())) {
+            } else
+                user.setPlayerType(OBSERVER);
+        });
+
+    }
+
+    /**
+     * выполнение хода
+     **/
+    private void processingStep(String userId, User initiator, int index, Pair openPair) {
+
+        this.curCard = initiator.getCards().get(index - 1);
+
+//        у вышедших игроков меняем роли сразу
+        switch (gameEvent) {
+
+            case NO_GAME:
+                return;     // никогда не ожидаемо
+
+            case DEF_PASS:
+                roundUp();
+                fetchCards();
+                break;
+
+            case DEF_FALL:
+                curDefender.getCards().addAll(field.fetchAll());
+                roundUp();
+                fetchCards();
+                break;
+
+            case DEF_STEP:
+                if (openPair == null)
+                    throw new DurakGamePrivateException("Не найдена открытая пара для отбивания карты", userId);
+                openPair.setDefender(initiator.getCards().remove(index - 1));
+                curWinner = checkUserWin(curDefender);
+                if (curWinner != null || curDefender.getCards().isEmpty()) {
+                    curDefender = null;
+                    roundUp();
+                    fetchCards();
+                }
+                break;
+
+            case ATT_STEP:
+                field.addPair(new Pair(initiator.getCards().remove(index - 1)));
+                roundBegun = true;
+                curWinner = checkUserWin(curAttacker);
+                if (curWinner != null)
+                    curAttacker = null;
+                break;
+
+            case SUBATT_STEP:
+                field.addPair(new Pair(initiator.getCards().remove(index - 1)));
+                curWinner = checkUserWin(curSubattacker);
+                if (curWinner != null)
+                    curSubattacker = null;
+                break;
+
+            default:
+                throw new DurakGameException("Возникло необрабатываемое исключение: не определен тип события игры");
+
+        }
+
+//        не закончена ли игра?
+        if ((cardDeck.isEmpty() && getCountCardInHands() == 0)){
+//            ничья
+            endGame();
+            return;
+        } else if (loserFound()){
+//            кто-то проиграл
+            endGame();
+            return;
+        }
+
+//        роли нужно переопределять только если закончился раунд
+//        а ходящих - всегда
+        if (!roundBegun){
+//            раунд завершился и сбросили флаг
+
+            if (DEF_FALL.equals(gameEvent)){
+                curAttacker = playerIterator.nextX(2);
+            } else
+                curAttacker = playerIterator.next();
+
+            // TODO: 013 13.05.20 рефакторинг?
+            curAttacker.setPlayerType(ATTACKER);
+            curPlayer = curAttacker;
+            users.forEach((s, user) -> {
+                if (PLAYER.equals(user.getRole()) && !user.equals(curAttacker) && FINISHER.equals(user.getPlayerType()))
+                    user.setPlayerType(null);
+            });
+            classification();
+
+        } else {
+//            определение нового ходящего
+
+//            если остались неотбитые карты, то неважно, кто ходил - сейчас надо дать возможность защитнику отбиться
+//            также если не осталось никого в атаке, то ход защитника, чтобы он мог завершить раунд
+            if (!field.getOpenPairs().isEmpty() || (curAttacker == null && curSubattacker == null))
+//                переклассификация не требуется. просто могла смениться очередь ходящего. роли не менялись
+                curPlayer = curDefender;
+            else {
+                if (curAttacker != null)
+                    curPlayer = curAttacker;
+                else {
+//                    атакующий вышел. смена атакующего
+                    curSubattacker.setPlayerType(ATTACKER);
+                    curPlayer = curSubattacker;
+                    curAttacker = curSubattacker;
+                    curSubattacker = null;
+                }
+            }
+
+        }
+
+    }
+
+    /**
+     * проверка возможности подкинуть карту
+     **/
+    private void checkSubattack(String userId, User initiator, int index) {
+
+        if (field.getPairs().size() > 5)
+            throw new DurakGamePrivateException("Вы не можете сделать ход, допускается только 6 пар на игровом поле", userId);
+
+        if (index > initiator.getCards().size())
+            throw new DurakGamePrivateException("Некорректный ввод. Введите порядковый номер карты, начиная с 1", userId);
+
+        if (!field.getPlayedRanks().contains(initiator.getCards().get(index - 1).getRank()))
+            throw new DurakGamePrivateException("Вы не можете подкинуть карту, которой нет на игровом поле", userId);
+
+        if ((Math.min(MAX_NUM_CARD_ON_FIELD, curDefender.getCards().size()) - field.getOpenPairs().size()) < 1)
+            throw new DurakGamePrivateException("Вы не можете подкинуть карту, так как у защищающегося игрока не хватит карт, чтобы отбиться", userId);
+
+    }
+
+    /**
+     * добор карт игроками, которые еще не вышли из игры
+     **/
+    private void fetchCards() {
+        users.forEach((s, user) -> {
+            if (PLAYER.equals(user.getRole()) && !FINISHER.equals(user.getPlayerType()))
+                user.pickCards(cardDeck, MAX_NUM_CARD_IN_HAND);
+        });
+    }
+
+    /**
+     * получение всех карт на руках всех пользователей
+     **/
+    private long getCountCardInHands() {
+        return users.values().stream().map(User::getCards).count();
+    }
+
+    /**
+     * переход на новый раунд
+     **/
+    private void roundUp() {
+        round++;
+        roundBegun = false;
+        field = new Field();
+    }
+
+    /**
+     * проверка, должен ли выйти игрок
+     **/
+    private User checkUserWin(User curUser) {
+        if (cardDeck.isEmpty() && curUser.getCards().isEmpty()){
+            curUser.setPlayerType(FINISHER);
+            return curUser;
+        } else
+            return null;
+    }
+
+    /**
+     * проверка на наличие проигравшего
+     **/
+    private boolean loserFound() {
+
+        if (!cardDeck.isEmpty())
+            return false;
+
+//        if (playerIterator.hasNext())     не анализирует количество карт на руках
+        if (users.values().stream().filter(user -> !user.getCards().isEmpty()).count() > 1)
+            return false;
+
+        if (curPlayer.equals(curDefender) && curPlayer.getCards().size() == 1 && field.getOpenPairs().size() == 1)
+            return false;
+
+        curPlayer = users.values().stream()
+                .filter(user -> !user.getCards().isEmpty()).findFirst().orElseThrow(() -> new DurakGameException("Не удается определить проигравшего"));
+
+        return true;
+
+    }
+
+    private void endGame(){
+
+        gameStarted = false;
+
+//        выводим из игры игроков и очищаем карты в руках
+        users.forEach((s, user) -> {
+            user.setRole(GUEST);
+            user.setPlayerType(null);
+            user.setHand(new Hand());
+        });
+
+        cardDeck = null;
+        playerIterator = null;
+        reasonCard = null;
+        field = null;
+        round = 0;
+        roundBegun = false;
+
+        curPlayer = null;
+        curAttacker = null;
+        curDefender = null;
+        curSubattacker = null;
+
+    }
+
 
     /**
      * получение приватного игрового контента пользователя
@@ -146,11 +648,9 @@ public class DurakGameServiceImpl implements GameService {
     /**
      * получение публичного стартового игрового контента
      **/
-    private PublicGameContent getStartPublicGameContent(String userId) {
+    private DurakPublicStartGameContent getStartPublicGameContent(String userId) {
 
-//        нужно различать начало игры и уже непосредственный процесс
-
-        PublicGameContent content = new PublicGameContent();
+        DurakPublicStartGameContent content = new DurakPublicStartGameContent();
 
 //        количество оставшихся в колоде карт
         content.setCardDeckSize(cardDeck.size());
@@ -166,7 +666,7 @@ public class DurakGameServiceImpl implements GameService {
 
         content.setGameMessage(String.format("Игра началась. В колоде карт: %s. ", cardDeck.size())
                 + "\n Список участников: " + users.values().stream()
-                .filter(user -> UserRole.PLAYER.equals(user.getRole()))
+                .filter(user -> PLAYER.equals(user.getRole()))
                 .map(User::getName)
                 .sorted()
                 .collect(Collectors.joining(", "))
@@ -176,123 +676,6 @@ public class DurakGameServiceImpl implements GameService {
         );
 
         return content;
-
-    }
-
-
-
-    /**
-     * инициализация новой игры:
-     *   инициализируем колоду: набор карт, перетасовка, определение козыря
-     *   жеребьевка
-     *   инициализация итератора
-     *   определение ролей/типов всех остальных игроков
-     **/
-    private void initGame(String userId) {
-
-        this.gameStarted = true;
-        this.cardDeck = CardDeckGenerator.newCardDeck();
-        toss();
-        playerIterator = new PlayerIterator();  // итератор имеет смысл инициализировать только после определения атакующего: от него будет идти отсчет
-        classification();
-
-    }
-
-    /**
-     * жеребьевка: определение игроков из списка всех пользователей, карты, определяющей первый ход, игрока, делающего первый ход (атакующего)
-     **/
-    private void toss() {
-
-        int i = 1;
-        for (User user : users.values()) {
-            user.setRole(UserRole.PLAYER);
-            user.pickCards(this.cardDeck, MAX_NUM_CARD_ON_HAND);
-            if (i == MAX_NUM_PLAYERS) {
-                break;
-            }
-            i++;
-        }
-
-        reasonCard = users.values().stream()
-                .filter(user -> UserRole.PLAYER.equals(user.getRole()))
-                .flatMap(user -> user.getCards().stream())
-                .reduce((card, card2) -> {
-//                    жеребьевка: наименьшая козырная -> наименьшая некозырная -> любая
-                    if (card.isTrump() && card2.isTrump())
-                        return card.getRank().ordinal() < card2.getRank().ordinal() ? card : card2;
-                    if (card.isTrump())
-                        return card;
-                    if (card2.isTrump())
-                        return card2;
-                    return card.getRank().ordinal() < card2.getRank().ordinal() ? card : card2;
-                }).orElseThrow(() -> new DurakGameException("Ошибка жеребьёвки: не удалось определить карту, определяющую первый ход"));
-
-        curAttacker = users.values().stream()
-                .filter(user -> user.getCards().contains(reasonCard))
-                .findFirst().orElseThrow(() -> new DurakGameException("Ошибка жеребьёвки: не удалось определить принадлежность карты, определяющей первый ход"));
-
-        curAttacker.setPlayerType(PlayerType.ATTACKER);
-
-    }
-
-    /**
-     * определение ролей/типов всех игроков по атакующему игроку и итератору
-     *      предполагается вызывать эту функцию, когда определен атакующий и обнулены другие роли
-     *      (не может быть два атакующих, поэтому все старые типы игроков логичнее затирать ПРИ ПОЛУЧЕНИИ НОВОГО АТАКУЮЩЕГО, в конце раунда)
-     *         на атакующего указывает итератор
-     *         следующий за ним будет защитник
-     *         следующий - подкидывающий
-     *         остальные - наблюдатели
-     **/
-    private void classification() {
-
-        if (users.values().stream()
-                .filter(user -> PlayerType.ATTACKER.equals(user.getPlayerType()))
-                .count() != 1)
-            throw new DurakGameException("Классификация игроков невозможна. Должен быть всего лишь один атакующий игрок");
-
-        if (users.values().stream().anyMatch(user -> UserRole.PLAYER.equals(user.getRole())
-                && !PlayerType.ATTACKER.equals(user.getPlayerType())
-                && user.getPlayerType() != null))
-            throw new DurakGameException("Классификация игроков невозможна. Типы всех игроков, кроме атакующего, должны быть очищены");
-
-        curDefender = playerIterator.peekNextX(1);
-        curDefender.setPlayerType(PlayerType.DEFENDER);
-
-        curSubattacker = playerIterator.peekNextX(2);
-        if (!curAttacker.equals(curSubattacker))
-            curSubattacker.setPlayerType(PlayerType.SUBATTACKER);
-        else
-            curSubattacker = null;
-//            если найденный подкидывающий и есть атакующий (играют всего два человека), то тип игрока не меняем
-
-        users.forEach((s, user) -> {
-//            для оптимизации из-за ленивой инициализации
-            if (user.equals(curAttacker) || user.equals(curDefender) || user.equals(curSubattacker)) {
-            } else
-                user.setPlayerType(PlayerType.OBSERVER);
-        });
-
-    }
-
-    private void endGame(){
-
-        gameStarted = false;
-
-//        выводим из игры игроков и очищаем карты в руках
-        users.forEach((s, user) -> {
-            user.setRole(UserRole.GUEST);
-            user.setPlayerType(null);
-            user.setHand(new Hand());
-        });
-
-//        очищаем колоду и прочие поля
-        cardDeck = null;
-        playerIterator = null;
-        reasonCard = null;
-        curAttacker = null;
-        curDefender = null;
-        curSubattacker = null;
 
     }
 
@@ -309,9 +692,9 @@ public class DurakGameServiceImpl implements GameService {
 
         public PlayerIterator() {
             this.users.addAll(DurakGameServiceImpl.this.users.values().stream()
-                                    .filter(user -> UserRole.PLAYER.equals(user.getRole()))
+                                    .filter(user -> PLAYER.equals(user.getRole()))
                                     .collect(Collectors.toList()));
-            this.users.sort(Comparator.comparing(user -> !PlayerType.ATTACKER.equals(user.getPlayerType())));
+            this.users.sort(Comparator.comparing(user -> !ATTACKER.equals(user.getPlayerType())));
         }
 
         @Override
@@ -328,7 +711,7 @@ public class DurakGameServiceImpl implements GameService {
             while (true){
                 this.index = (this.index + 1) % this.users.size();
                 User user = this.users.get(this.index);
-                if (UserRole.PLAYER.equals(user.getRole()))
+                if (PLAYER.equals(user.getRole()) && !FINISHER.equals(user.getPlayerType()))
                     return user;
             }
 
@@ -371,7 +754,7 @@ public class DurakGameServiceImpl implements GameService {
                 do {
                     peekIndex = (peekIndex + 1) % this.users.size();
                     user = this.users.get(peekIndex);
-                } while (!UserRole.PLAYER.equals(user.getRole()));
+                } while (!PLAYER.equals(user.getRole()) && !FINISHER.equals(user.getPlayerType()));
             }
 
             return this.users.get(peekIndex);
@@ -380,7 +763,7 @@ public class DurakGameServiceImpl implements GameService {
 
         private long getCountPlayers() {
             return this.users.stream()
-                    .filter(user -> UserRole.PLAYER.equals(user.getRole()))     // потому что роли пользователей в процессе игры меняются
+                    .filter(user -> (PLAYER.equals(user.getRole()) && !FINISHER.equals(user.getPlayerType())))     // потому что роли пользователей в процессе игры меняются
                     .count();
         }
 
