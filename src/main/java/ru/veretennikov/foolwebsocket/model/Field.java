@@ -23,12 +23,24 @@ public class Field {
     /**
      * работать с парами необходимо через эту функцию, чтобы обновлялся список "играющих" карт
      **/
-    public void addPair(Pair pair){
+    public void openPair(Pair pair){
 
         this.pairs.add(pair);
         Rank rankAttacker = pair.getAttacker().getRank();
         if (!playedRanks.contains(rankAttacker))
             playedRanks.add(rankAttacker);
+
+    }
+
+    /**
+     * работать с парами необходимо через эту функцию, чтобы обновлялся список "играющих" карт
+     **/
+    public void closePair(Pair openPair, Card defender) {
+
+        openPair.setDefender(defender);
+        Rank rankDefender = defender.getRank();
+        if (!playedRanks.contains(rankDefender))
+            playedRanks.add(rankDefender);
 
     }
 

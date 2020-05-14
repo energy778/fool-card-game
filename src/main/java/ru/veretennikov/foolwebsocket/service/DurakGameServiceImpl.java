@@ -100,7 +100,7 @@ public class DurakGameServiceImpl implements GameService {
     public void checkCommand(String message, String userId) {
 
         // TODO: 012 12.05.20 переписать на нормальный логгер
-        System.out.println(String.format("Incoming  message. id: %s, message: %s", message, userId));
+        System.out.println(String.format("Incoming message. id: %s, message: %s", userId, message));
 
         gameEvent = NO_GAME;
         this.curCard = null;
@@ -115,7 +115,7 @@ public class DurakGameServiceImpl implements GameService {
 
         PlayerType initiatorPlayerType = initiator.getPlayerType();
         if (FINISHER.equals(initiatorPlayerType))
-            throw new DurakGamePrivateException("Вы не можете сделать ход, так как вышли из игры. Дождитесь ее окончания и присоединяйтесь к новой", userId);
+            throw new DurakGamePrivateException("Вы не можете сделать ход, так как закончили игру. Дождитесь ее окончания и присоединяйтесь к новой", userId);
         if (OBSERVER.equals(initiatorPlayerType)
                 || DEFENDER.equals(initiatorPlayerType) && !curPlayer.equals(curDefender)
                 || curPlayer.equals(curSubattacker) && !roundBegun)
@@ -139,6 +139,10 @@ public class DurakGameServiceImpl implements GameService {
 
         if (initiator.equals(curSubattacker)){
 //            пытаемся подкинуть карты
+
+//            у подкидывающего нет опции паса/взятия карт
+            if (index == 0)
+                throw new DurakGamePrivateException("Некорректный ввод. Подкидывающий может только подкидывать карты. Введите порядковый номер карты, начиная с 1", userId);
 
             checkSubattack(userId, initiator, index);
 
@@ -235,7 +239,9 @@ public class DurakGameServiceImpl implements GameService {
         ArrayList<GameContent> content = new ArrayList<>();
 
         if (round == 1 && field.getPairs().isEmpty()) {
+//            начало игры
 
+//            начало нового раунда
             addContentNewRound(content);
 
             DurakPublicStartGameContent publicContent;
@@ -249,12 +255,12 @@ public class DurakGameServiceImpl implements GameService {
 
 //            приват. карты игроков
             List<PrivateGameContent> privateContent = users.values().stream()
-                    .filter(user -> PLAYER.equals(user.getRole()))
+                    .filter(user -> PLAYER.equals(user.getRole()) && !FINISHER.equals(user.getPlayerType()))
                     .map(user -> getCurrentPrivateGameContent(user.getId()))
                     .collect(Collectors.toList());
             content.addAll(privateContent);
 
-//            #5. приват. 'ваш ход'
+//            приват. 'ваш ход'
             addPrivateContentStep(content);
 
             return content;
@@ -265,19 +271,23 @@ public class DurakGameServiceImpl implements GameService {
                 return Collections.emptyList();
 
             if (gameStarted){
+//                идёт игра
 
                 if (roundBegun){
-
 //                    ход
+
                     DurakPublicCurrentGameContent publicContent = new DurakPublicCurrentGameContent();
                     publicContent.setCardStep(curCard);
                     publicContent.setGameEvent(gameEvent);
                     publicContent.setGameMessage(users.get(userId).getName());
                     content.add(publicContent);
 
-                    content.add(getCurrentPrivateGameContent(userId));
+//                    новый состав карт для ходившего
+                    if (curWinner == null)
+                        content.add(getCurrentPrivateGameContent(userId));
 
                 } else {
+//                    окончание раунда и начало нового
 
 //                    инфа о результатах предыдущего раунда
                     DurakPublicCurrentGameContent publicContentAfter = new DurakPublicCurrentGameContent();
@@ -299,7 +309,7 @@ public class DurakGameServiceImpl implements GameService {
 
 //                    обновление информации о картах на руках игроков
                     List<PrivateGameContent> privateContents = users.values().stream()
-                            .filter(user -> PLAYER.equals(user.getRole()))
+                            .filter(user -> PLAYER.equals(user.getRole()) && !FINISHER.equals(user.getPlayerType()))
                             .map(user -> getCurrentPrivateGameContent(user.getId()))
                             .collect(Collectors.toList());
                     content.addAll(privateContents);
@@ -310,21 +320,15 @@ public class DurakGameServiceImpl implements GameService {
                 addPrivateContentStep(content);
 
             } else {
-
-//            Игра завершена
+//                Игра завершена
 
                 DurakPublicCurrentGameContent endContent = new DurakPublicCurrentGameContent();
-                endContent.setCardDeckSize(0);
-                endContent.setTrump(null);
-                endContent.setTrumpSuit(0);
-                endContent.setGameMessage(String.format("Игра завершена, проиграл %s", curPlayer));
+                endContent.setGameEvent(gameEvent);
+                if (curPlayer == null)
+                    endContent.setGameMessage("Игра завершена, ничья");
+                else
+                    endContent.setGameMessage(String.format("Игра завершена, проиграл %s", curPlayer.getName()));
                 content.add(endContent);
-
-                List<PrivateGameContent> privateContents = users.values().stream()
-                        .filter(user -> PLAYER.equals(user.getRole()))
-                        .map(user -> getCurrentPrivateGameContent(user.getId()))
-                        .collect(Collectors.toList());
-                content.addAll(privateContents);
 
             }
 
@@ -344,6 +348,15 @@ public class DurakGameServiceImpl implements GameService {
      *   определение ролей/типов всех остальных игроков
      **/
     private void initGame(String userId) {
+
+        gameEvent = null;
+        reasonCard = null;
+        curCard = null;
+        curPlayer = null;
+        curAttacker = null;
+        curDefender = null;
+        curSubattacker = null;
+        curWinner = null;
 
         this.gameStarted = true;
         this.cardDeck = CardDeckGenerator.newCardDeck(ranks);
@@ -372,7 +385,7 @@ public class DurakGameServiceImpl implements GameService {
         }
 
         reasonCard = users.values().stream()
-                .filter(user -> PLAYER.equals(user.getRole()))
+                .filter(user -> PLAYER.equals(user.getRole()) && !FINISHER.equals(user.getPlayerType()))
                 .flatMap(user -> user.getCards().stream())
                 .reduce((card, card2) -> {
 //                    жеребьевка: наименьшая козырная -> наименьшая некозырная -> любая
@@ -441,6 +454,7 @@ public class DurakGameServiceImpl implements GameService {
      **/
     private void processingStep(String userId, User initiator, int index, Pair openPair) {
 
+        curWinner = null;
         System.out.println(gameEvent);
         if (index != 0)
             this.curCard = initiator.getCards().get(index - 1);
@@ -465,7 +479,7 @@ public class DurakGameServiceImpl implements GameService {
             case DEF_STEP:
                 if (openPair == null)
                     throw new DurakGamePrivateException("Не найдена открытая пара для отбивания карты", userId);
-                openPair.setDefender(initiator.getCards().remove(index - 1));
+                field.closePair(openPair, initiator.getCards().remove(index - 1));
                 curWinner = checkUserWin(curDefender);
                 if (curWinner != null || curDefender.getCards().isEmpty()) {
                     curDefender = null;
@@ -475,7 +489,7 @@ public class DurakGameServiceImpl implements GameService {
                 break;
 
             case ATT_STEP:
-                field.addPair(new Pair(initiator.getCards().remove(index - 1)));
+                field.openPair(new Pair(initiator.getCards().remove(index - 1)));
                 roundBegun = true;
                 curWinner = checkUserWin(curAttacker);
                 if (curWinner != null)
@@ -483,7 +497,7 @@ public class DurakGameServiceImpl implements GameService {
                 break;
 
             case SUBATT_STEP:
-                field.addPair(new Pair(initiator.getCards().remove(index - 1)));
+                field.openPair(new Pair(initiator.getCards().remove(index - 1)));
                 curWinner = checkUserWin(curSubattacker);
                 if (curWinner != null)
                     curSubattacker = null;
@@ -495,12 +509,10 @@ public class DurakGameServiceImpl implements GameService {
         }
 
 //        не закончена ли игра?
-        if ((cardDeck.isEmpty() && getCountCardInHands() == 0)){
+        if ((cardDeck.isEmpty() && getCountCardInHands() == 0)
+                || loserFound() ){
 //            ничья
-            endGame();
-            return;
-        } else if (loserFound()){
-//            кто-то проиграл
+            gameEvent = GAME_END;
             endGame();
             return;
         }
@@ -636,18 +648,6 @@ public class DurakGameServiceImpl implements GameService {
             user.setHand(new Hand());
         });
 
-        cardDeck = null;
-        playerIterator = null;
-        reasonCard = null;
-        field = null;
-        round = 0;
-        roundBegun = false;
-
-        curPlayer = null;
-        curAttacker = null;
-        curDefender = null;
-        curSubattacker = null;
-
     }
 
 
@@ -726,7 +726,7 @@ public class DurakGameServiceImpl implements GameService {
         privateStartGameContent.setGameMessage(gameMessage);
         content.add(privateStartGameContent);
 
-        if (round != 1 && curSubattacker != null){
+        if (roundBegun && curSubattacker != null){
             privateStartGameContent = new PrivateGameContent();
             privateStartGameContent.setUserId(curSubattacker.getId());
             privateStartGameContent.setGameMessage("Вы можете подкинуть карту");
@@ -748,7 +748,7 @@ public class DurakGameServiceImpl implements GameService {
 
         public PlayerIterator() {
             this.users.addAll(DurakGameServiceImpl.this.users.values().stream()
-                                    .filter(user -> PLAYER.equals(user.getRole()))
+                                    .filter(user -> PLAYER.equals(user.getRole()) && !FINISHER.equals(user.getPlayerType()))
                                     .collect(Collectors.toList()));
             this.users.sort(Comparator.comparing(user -> !ATTACKER.equals(user.getPlayerType())));
         }

@@ -168,7 +168,6 @@ function onMessageReceived(payload) {
         usernameElement.appendChild(usernameText);
         messageElement.appendChild(usernameElement);
 
-        //
         let textElement = document.createElement('p');
         let messageText = document.createTextNode(message.content);
         textElement.appendChild(messageText);
@@ -242,7 +241,8 @@ function onMessageReceived(payload) {
 
         } else if (message.gameContent.gameEvent === 'DEF_PASS'
             || message.gameContent.gameEvent === 'DEF_FALL'
-            || message.gameContent.gameEvent === 'ROUND_BEGIN') {
+            || message.gameContent.gameEvent === 'ROUND_BEGIN'
+            || message.gameContent.gameEvent === 'GAME_END') {
 
             textElement = document.createElement('span');
             messageText = document.createTextNode(message.gameContent.gameMessage);

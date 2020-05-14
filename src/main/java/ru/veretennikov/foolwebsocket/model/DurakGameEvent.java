@@ -13,6 +13,8 @@ public enum DurakGameEvent {
     SUBATT_STEP,
 
     DEF_PASS,
-    DEF_FALL
+    DEF_FALL,
+
+    GAME_END
 
 }
