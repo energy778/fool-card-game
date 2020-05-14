@@ -126,10 +126,12 @@ function onPrivateMessageReceived(payload) {
 
     if(message.type === 'START_GAME') {
         let cards = message.gameContent.cards;
-        showCards(cards, messageElement);
+        if (cards !== null)
+            showCards(cards, messageElement);
     } else if(message.type === 'GAME_MESSAGE') {
         let cards = message.gameContent.cards;
-        showCards(cards, messageElement);
+        if (cards !== null)
+            showCards(cards, messageElement);
     } else {
         return;
     }
@@ -180,31 +182,43 @@ function onMessageReceived(payload) {
         let textElement;
         let messageText;
 
-        textElement = document.createElement('span');      // p
-        messageText = document.createTextNode(message.gameContent.gameMessage);
-        textElement.appendChild(messageText);
-        messageElement.appendChild(textElement);
+        if (message.gameContent.gameEvent === 'ROUND_BEGIN') {
+            textElement = document.createElement('span');
+            messageText = document.createTextNode(message.gameContent.gameMessage);
+            textElement.appendChild(messageText);
+            messageElement.appendChild(textElement);
 
-        textElement = document.createElement('span');
-        messageText = document.createTextNode("Козырная карта: ");
-        textElement.appendChild(messageText);
-        messageElement.appendChild(textElement);
-        showCards(Array.of(message.gameContent.trump), messageElement);
+        } else if (message.gameContent.gameEvent === 'ANNOUNCE_TRUMP') {
+            textElement = document.createElement('span');
+            messageText = document.createTextNode(message.gameContent.gameMessage);
+            textElement.appendChild(messageText);
+            messageElement.appendChild(textElement);
+            showCards(Array.of(message.gameContent.trump), messageElement);
 
-        textElement = document.createElement('span');
-        messageText = document.createTextNode("Карта, определившая первый ход");
-        textElement.appendChild(messageText);
-        messageElement.appendChild(textElement);
-        showCards(Array.of(message.gameContent.reasonCard), messageElement);
+        } else if (message.gameContent.gameEvent === 'ANNOUNCE_REASON_CARD') {
+            textElement = document.createElement('span');
+            messageText = document.createTextNode(message.gameContent.gameMessage);
+            textElement.appendChild(messageText);
+            messageElement.appendChild(textElement);
+            showCards(Array.of(message.gameContent.reasonCard), messageElement);
+
+        } else {
+            // nothing yet
+        }
 
     } else if (message.type === 'GAME_MESSAGE') {
-        // игровое сообщение. может быть от пользователя
+        // ход игрока
 
         messageElement.classList.add('chat-message');
 
-        showCards(message.gameContent.cards, messageElement);
+        let textElement;
+        let messageText;
 
-        if (message.gameContent.cardStep !== null){
+        if (message.gameContent.gameEvent === 'DEF_STEP'
+            || message.gameContent.gameEvent === 'ATT_STEP'
+            || message.gameContent.gameEvent === 'SUBATT_STEP') {
+
+            // тут может быть еще ситуация, когда какой-либо игрок вышел из игры - нужно отдельно обрабатывать здесь или в сервисе регистрировать новое событие и генерить отдельное сообщение-контент
 
             let avatarElement = document.createElement('i');
             let avatarText = document.createTextNode(message.sender[0]);
@@ -218,6 +232,25 @@ function onMessageReceived(payload) {
             messageElement.appendChild(usernameElement);
 
             showCards(Array.of(message.gameContent.cardStep), messageElement);
+
+        } else if (message.gameContent.gameEvent === 'ANNOUNCE_TRUMP') {
+            textElement = document.createElement('span');
+            messageText = document.createTextNode(message.gameContent.gameMessage);
+            textElement.appendChild(messageText);
+            messageElement.appendChild(textElement);
+            showCards(Array.of(message.gameContent.trump), messageElement);
+
+        } else if (message.gameContent.gameEvent === 'DEF_PASS'
+            || message.gameContent.gameEvent === 'DEF_FALL'
+            || message.gameContent.gameEvent === 'ROUND_BEGIN') {
+
+            textElement = document.createElement('span');
+            messageText = document.createTextNode(message.gameContent.gameMessage);
+            textElement.appendChild(messageText);
+            messageElement.appendChild(textElement);
+
+        } else {
+            // nothing yet
 
         }
 

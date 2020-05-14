@@ -13,7 +13,8 @@ import java.util.stream.Collectors;
 import static ru.veretennikov.foolwebsocket.model.DurakGameEvent.*;
 import static ru.veretennikov.foolwebsocket.model.PlayerType.*;
 import static ru.veretennikov.foolwebsocket.model.Rank.*;
-import static ru.veretennikov.foolwebsocket.model.UserRole.*;
+import static ru.veretennikov.foolwebsocket.model.UserRole.GUEST;
+import static ru.veretennikov.foolwebsocket.model.UserRole.PLAYER;
 
 @Slf4j
 @Service
@@ -99,7 +100,7 @@ public class DurakGameServiceImpl implements GameService {
     public void checkCommand(String message, String userId) {
 
         // TODO: 012 12.05.20 переписать на нормальный логгер
-        System.out.println(String.format("Income id: %s, message: %s", message, userId));
+        System.out.println(String.format("Incoming  message. id: %s, message: %s", message, userId));
 
         gameEvent = NO_GAME;
         this.curCard = null;
@@ -166,8 +167,10 @@ public class DurakGameServiceImpl implements GameService {
 
                 } else {
 
-                    if (index > initiator.getCards().size() || index == 0)
+                    if (index > initiator.getCards().size())
                         throw new DurakGamePrivateException("Некорректный ввод. Введите порядковый номер карты, начиная с 1", userId);
+                    if (index == 0)
+                        throw new DurakGamePrivateException("Вы не можете пасовать в начале атаки. Введите порядковый номер карты, начиная с 1", userId);
 
                     gameEvent = ATT_STEP;
 
@@ -231,16 +234,30 @@ public class DurakGameServiceImpl implements GameService {
 
         ArrayList<GameContent> content = new ArrayList<>();
 
-        if (round == 1) {
+        if (round == 1 && field.getPairs().isEmpty()) {
 
-            DurakPublicStartGameContent publicContent = getStartPublicGameContent(userId);
+            addContentNewRound(content);
+
+            DurakPublicStartGameContent publicContent;
+
+//            карта, определившая первый ход
+            publicContent = new DurakPublicStartGameContent();
+            publicContent.setGameEvent(ANNOUNCE_REASON_CARD);
+            publicContent.setReasonCard(reasonCard);
+            publicContent.setGameMessage("Карта, определившая первый ход: ");
             content.add(publicContent);
 
+//            приват. карты игроков
             List<PrivateGameContent> privateContent = users.values().stream()
                     .filter(user -> PLAYER.equals(user.getRole()))
                     .map(user -> getCurrentPrivateGameContent(user.getId()))
                     .collect(Collectors.toList());
             content.addAll(privateContent);
+
+//            #5. приват. 'ваш ход'
+            addPrivateContentStep(content);
+
+            return content;
 
         } else {
 
@@ -251,6 +268,7 @@ public class DurakGameServiceImpl implements GameService {
 
                 if (roundBegun){
 
+//                    ход
                     DurakPublicCurrentGameContent publicContent = new DurakPublicCurrentGameContent();
                     publicContent.setCardStep(curCard);
                     publicContent.setGameEvent(gameEvent);
@@ -261,40 +279,41 @@ public class DurakGameServiceImpl implements GameService {
 
                 } else {
 
-                    DurakPublicCurrentGameContent publicContent = new DurakPublicCurrentGameContent();
-                    publicContent.setCardStep(curCard);
-                    publicContent.setGameEvent(gameEvent);
-                    publicContent.setGameMessage(users.get(userId).getName());
-                    content.add(publicContent);
+//                    инфа о результатах предыдущего раунда
+                    DurakPublicCurrentGameContent publicContentAfter = new DurakPublicCurrentGameContent();
+                    publicContentAfter.setGameEvent(gameEvent);
+                    String eventString = "";
+                    if (DEF_PASS.equals(gameEvent))
+                        eventString = "бито";
+                    else if (DEF_FALL.equals(gameEvent))
+                        eventString = "защита взяла карты";
+                    else if (DEF_STEP.equals(gameEvent))
+                        eventString = "защита вышла из игры";
+                    else
+                        throw new DurakGameException(String.format("Не удалось определить текстовое представление события окончания раунда", gameEvent));
+                    publicContentAfter.setGameMessage(String.format("Раунд завершён: %s. ", eventString));
+                    content.add(publicContentAfter);
 
+//                    инфа о новом раунде
+                    addContentNewRound(content);
+
+//                    обновление информации о картах на руках игроков
                     List<PrivateGameContent> privateContents = users.values().stream()
                             .filter(user -> PLAYER.equals(user.getRole()))
                             .map(user -> getCurrentPrivateGameContent(user.getId()))
                             .collect(Collectors.toList());
                     content.addAll(privateContents);
 
-                    DurakPublicCurrentGameContent publicContentAfter = new DurakPublicCurrentGameContent();
-                    publicContentAfter.setCardStep(null);
-                    publicContentAfter.setGameEvent(gameEvent);
-                    String eventString = "";
-                    if (DEF_PASS.equals(gameEvent))
-                        eventString = "Бито";
-                    else if (DEF_FALL.equals(gameEvent))
-                        eventString = "защита отбилась";
-                    else if (DEF_STEP.equals(gameEvent))
-                        eventString = "защита вышла из игры";
-                    else
-                        throw new DurakGameException(String.format("Не удалось определить текстовое представление события окончания раунда", gameEvent));
-                    publicContentAfter.setGameMessage(String.format("Раунд завершён: %s. " + "Начался новый раунд: %s", eventString, round));
-                    content.add(publicContentAfter);
-
                 }
+
+//                "Ваш ход"
+                addPrivateContentStep(content);
 
             } else {
 
 //            Игра завершена
 
-                DurakPublicGameContent endContent = new DurakPublicGameContent();
+                DurakPublicCurrentGameContent endContent = new DurakPublicCurrentGameContent();
                 endContent.setCardDeckSize(0);
                 endContent.setTrump(null);
                 endContent.setTrumpSuit(0);
@@ -314,7 +333,6 @@ public class DurakGameServiceImpl implements GameService {
         return content;
 
     }
-
 
 
 
@@ -423,7 +441,9 @@ public class DurakGameServiceImpl implements GameService {
      **/
     private void processingStep(String userId, User initiator, int index, Pair openPair) {
 
-        this.curCard = initiator.getCards().get(index - 1);
+        System.out.println(gameEvent);
+        if (index != 0)
+            this.curCard = initiator.getCards().get(index - 1);
 
 //        у вышедших игроков меняем роли сразу
         switch (gameEvent) {
@@ -499,7 +519,7 @@ public class DurakGameServiceImpl implements GameService {
             curAttacker.setPlayerType(ATTACKER);
             curPlayer = curAttacker;
             users.forEach((s, user) -> {
-                if (PLAYER.equals(user.getRole()) && !user.equals(curAttacker) && FINISHER.equals(user.getPlayerType()))
+                if (PLAYER.equals(user.getRole()) && !user.equals(curAttacker) && !FINISHER.equals(user.getPlayerType()))
                     user.setPlayerType(null);
             });
             classification();
@@ -507,21 +527,20 @@ public class DurakGameServiceImpl implements GameService {
         } else {
 //            определение нового ходящего
 
-//            если остались неотбитые карты, то неважно, кто ходил - сейчас надо дать возможность защитнику отбиться
-//            также если не осталось никого в атаке, то ход защитника, чтобы он мог завершить раунд
+//            если остались неотбитые карты, то
+//                  неважно, кто ходил - сейчас надо дать возможность защитнику отбиться
+//                  также если не осталось никого в атаке, то ход защитника, чтобы он мог завершить раунд
             if (!field.getOpenPairs().isEmpty() || (curAttacker == null && curSubattacker == null))
 //                переклассификация не требуется. просто могла смениться очередь ходящего. роли не менялись
                 curPlayer = curDefender;
+            else if (curAttacker != null)
+                curPlayer = curAttacker;
             else {
-                if (curAttacker != null)
-                    curPlayer = curAttacker;
-                else {
-//                    атакующий вышел. смена атакующего
-                    curSubattacker.setPlayerType(ATTACKER);
-                    curPlayer = curSubattacker;
-                    curAttacker = curSubattacker;
-                    curSubattacker = null;
-                }
+//                атакующий вышел. смена атакующего
+                curSubattacker.setPlayerType(ATTACKER);
+                curPlayer = curSubattacker;
+                curAttacker = curSubattacker;
+                curSubattacker = null;
             }
 
         }
@@ -632,8 +651,53 @@ public class DurakGameServiceImpl implements GameService {
     }
 
 
+    private void addContentNewRound(ArrayList<GameContent> content) {
+
+//        объявление игроков
+        DurakPublicStartGameContent publicContent = new DurakPublicStartGameContent();
+        publicContent.setGameEvent(ROUND_BEGIN);
+        StringBuilder sb = new StringBuilder("Раунд %s начался. ");
+        List<String> args = new ArrayList<>();
+        args.add(String.valueOf(round));
+        sb.append(System.lineSeparator());
+        if (cardDeck.size() > 0){
+            sb.append("В колоде карт: %s. ");
+            args.add(String.valueOf(cardDeck.size()));
+        } else {
+            sb.append("В колоде не осталось карт. ");
+        }
+        sb.append(System.lineSeparator());
+        sb.append("Список участников: %s. ");
+        args.add(users.values().stream()
+                .filter(user -> PLAYER.equals(user.getRole()) && !FINISHER.equals(user.getPlayerType()))
+                .map(User::getName)
+                .sorted()
+                .collect(Collectors.joining(", ")));
+        sb.append(System.lineSeparator());
+        sb.append("Ходит: %s. ");
+        args.add(curAttacker.getName());
+        sb.append(System.lineSeparator());
+        sb.append("Защищается: %s. ");
+        args.add(curDefender.getName());
+        if (curSubattacker != null) {
+            sb.append(System.lineSeparator());
+            sb.append("Подкидывает: %s. ");
+            args.add(curSubattacker.getName());
+        }
+        publicContent.setGameMessage(String.format(sb.toString(), args.toArray()));
+        content.add(publicContent);
+
+//        козырная карта
+        publicContent = new DurakPublicStartGameContent();
+        publicContent.setGameEvent(ANNOUNCE_TRUMP);
+        publicContent.setTrump(cardDeck.getTrump());
+        publicContent.setGameMessage("Козырная карта: ");
+        content.add(publicContent);
+
+    }
+
     /**
-     * получение приватного игрового контента пользователя
+     * личное сообщение участнику о его картах
      **/
     private PrivateGameContent getCurrentPrivateGameContent(String userId) {
 
@@ -646,36 +710,28 @@ public class DurakGameServiceImpl implements GameService {
     }
 
     /**
-     * получение публичного стартового игрового контента
+     * личные сообщения с предложением сделать ход/подкинуть карту
      **/
-    private DurakPublicStartGameContent getStartPublicGameContent(String userId) {
+    private void addPrivateContentStep(ArrayList<GameContent> content) {
 
-        DurakPublicStartGameContent content = new DurakPublicStartGameContent();
+        PrivateGameContent privateStartGameContent;
 
-//        количество оставшихся в колоде карт
-        content.setCardDeckSize(cardDeck.size());
+        privateStartGameContent = new PrivateGameContent();
+        privateStartGameContent.setUserId(curPlayer.getId());
+        String gameMessage = "Ваш ход. Введите цифру от 1 до " + curPlayer.getCards().size();
+        if (curPlayer == curAttacker)
+            gameMessage += " или 0 для паса";
+        if (curPlayer == curDefender)
+            gameMessage += " или 0 для взятия карт";
+        privateStartGameContent.setGameMessage(gameMessage);
+        content.add(privateStartGameContent);
 
-//        козырная карта (в самом начале новой игры - чтобы отобразить ее один раз на игровом поле)
-        content.setTrump(cardDeck.getTrump());
-
-//        карта, которая победила в жеребьевке
-        content.setReasonCard(reasonCard);
-
-//        козырная масть
-        content.setTrumpSuit(cardDeck.getTrumpSuit());
-
-        content.setGameMessage(String.format("Игра началась. В колоде карт: %s. ", cardDeck.size())
-                + "\n Список участников: " + users.values().stream()
-                .filter(user -> PLAYER.equals(user.getRole()))
-                .map(User::getName)
-                .sorted()
-                .collect(Collectors.joining(", "))
-                + "\n Ходит: " + curAttacker.getName()
-                + "\n Защищается: " + curDefender.getName()
-                + ((curSubattacker != null) ? "\n Подкидывает: " + curSubattacker.getName() : "")
-        );
-
-        return content;
+        if (round != 1 && curSubattacker != null){
+            privateStartGameContent = new PrivateGameContent();
+            privateStartGameContent.setUserId(curSubattacker.getId());
+            privateStartGameContent.setGameMessage("Вы можете подкинуть карту");
+            content.add(privateStartGameContent);
+        }
 
     }
 

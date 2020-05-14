@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import ru.veretennikov.foolwebsocket.model.GameContent;
-import ru.veretennikov.foolwebsocket.model.DurakPublicGameContent;
+import ru.veretennikov.foolwebsocket.model.PublicGameContent;
 
 @Setter
 @Getter
@@ -13,7 +13,7 @@ public class GameServerChatMessage extends ChatMessage {
 
     private GameContent gameContent;
 
-    public GameServerChatMessage(DurakPublicGameContent gameContent) {
+    public GameServerChatMessage(PublicGameContent gameContent) {
         super();
         this.gameContent = gameContent;
     }

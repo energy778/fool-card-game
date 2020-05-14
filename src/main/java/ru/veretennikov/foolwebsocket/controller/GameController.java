@@ -18,7 +18,7 @@ import ru.veretennikov.foolwebsocket.exception.GamePrivateException;
 import ru.veretennikov.foolwebsocket.exception.PrivateException;
 import ru.veretennikov.foolwebsocket.model.GameContent;
 import ru.veretennikov.foolwebsocket.model.PrivateGameContent;
-import ru.veretennikov.foolwebsocket.model.DurakPublicGameContent;
+import ru.veretennikov.foolwebsocket.model.PublicGameContent;
 import ru.veretennikov.foolwebsocket.service.GameService;
 import ru.veretennikov.foolwebsocket.service.GreetingService;
 
@@ -118,7 +118,7 @@ public class GameController {
             for (GameContent gameContent : gameContents) {
                 if (gameContent instanceof PrivateGameContent){
                     buildSendPrivateMessage((PrivateGameContent) gameContent, incomeMessage, messageType);
-                } else if (gameContent instanceof DurakPublicGameContent) {
+                } else if (gameContent instanceof PublicGameContent) {
                     buildSendPublicMessage(gameContent, incomeMessage, messageType);
                 } else {
 //                nothing yet

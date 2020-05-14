@@ -7,7 +7,5 @@ import lombok.Setter;
 @Setter
 @Getter
 @NoArgsConstructor
-public class DurakPublicGameContent extends PublicGameContent {
-    private DurakGameEvent gameEvent;
-    private Card trump;
+public class PublicGameContent extends GameContent {
 }
