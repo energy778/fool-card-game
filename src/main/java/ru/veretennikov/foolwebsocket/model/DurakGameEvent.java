@@ -15,6 +15,7 @@ public enum DurakGameEvent {
     DEF_PASS,
     DEF_FALL,
 
+    USER_OUT,
     GAME_END
 
 }

@@ -13,7 +13,7 @@ const colors = [
     '#ffc107', '#ff85af', '#FF9800', '#39bbb0'
 ];
 const colorsSuit = [
-    '#f00', '#000', '#000', '#f00'
+    '#f00', '#0А0', '#000', '#f00'
 ];
 const suits = [
     '♥', '♠', '♣', '♦'
@@ -242,6 +242,7 @@ function onMessageReceived(payload) {
         } else if (message.gameContent.gameEvent === 'DEF_PASS'
             || message.gameContent.gameEvent === 'DEF_FALL'
             || message.gameContent.gameEvent === 'ROUND_BEGIN'
+            || message.gameContent.gameEvent === 'USER_OUT'
             || message.gameContent.gameEvent === 'GAME_END') {
 
             textElement = document.createElement('span');

@@ -3,6 +3,7 @@ package ru.veretennikov.foolwebsocket.model;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Getter
@@ -32,9 +33,21 @@ public class User {
                 '}';
     }
 
+//    добираем из колоды
     public void pickCards(CardDeck cardDeck, int maxNumCardOnHand) {
         int need = Math.min(cardDeck.size(), maxNumCardOnHand - hand.getCards().size());
         this.hand.getCards().addAll(cardDeck.getSomeCards(need));
+        this.hand.getCards().sort(Comparator.comparing(card -> (((Card) card).isTrump()))
+                                        .thenComparing(card -> ((Card) card).getRank().ordinal())
+                                        .thenComparing(card -> ((Card) card).getSuit()));
+    }
+
+//    берём с поля все карты
+    public void pickCards(List<Card> cards) {
+        this.hand.getCards().addAll(cards);
+        this.hand.getCards().sort(Comparator.comparing(card -> (((Card) card).isTrump()))
+                .thenComparing(card -> ((Card) card).getRank().ordinal())
+                .thenComparing(card -> ((Card) card).getSuit()));
     }
 
     public List<Card> getCards() {

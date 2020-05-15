@@ -9,8 +9,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import ru.veretennikov.foolwebsocket.core.model.ChatMessage;
+import ru.veretennikov.foolwebsocket.core.model.ClientChatMessage;
 import ru.veretennikov.foolwebsocket.core.model.ServerChatMessage;
 import ru.veretennikov.foolwebsocket.service.GameService;
+import ru.veretennikov.foolwebsocket.service.SendService;
+
+import static ru.veretennikov.foolwebsocket.core.model.ChatMessage.MessageType.*;
 
 @Slf4j
 @Component
@@ -19,6 +23,7 @@ public class WebSocketEventListener {
 
     private final SimpMessageSendingOperations messagingTemplate;
     private final GameService gameService;
+    private final SendService sendService;
 
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectedEvent event) {
@@ -38,10 +43,15 @@ public class WebSocketEventListener {
             log.info("User Disconnected : " + username);
 
             ServerChatMessage chatMessage = new ServerChatMessage();
-            chatMessage.setType(ChatMessage.MessageType.LEAVE);
+            chatMessage.setType(LEAVE);
             chatMessage.setSender(username);
 
             messagingTemplate.convertAndSend("/topic/events", chatMessage);
+
+            ClientChatMessage clientChatMessage = new ClientChatMessage();
+            clientChatMessage.setSender(username);
+//            clientChatMessage.setType(LEAVE);
+            sendService.sendMessages(clientChatMessage, GAME_MESSAGE, gameService.getContent(userId));
 
         }
 

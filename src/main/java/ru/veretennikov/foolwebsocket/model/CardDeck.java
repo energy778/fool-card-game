@@ -22,20 +22,14 @@ public class CardDeck {
     }
 
     public boolean isEmpty() {
-//        if (cards == null)
-//            return true;
         return cards.isEmpty();
     }
 
     public Card pop() {
-//        if (cards == null)
-//            return null;
         return cards.pop();
     }
 
     public int size() {
-//        if (cards == null)
-//            return 0;
         return cards.size();
     }
 
@@ -50,11 +44,6 @@ public class CardDeck {
             curCard.setTrump(curCard.getSuit() == trumpSuit);
             cards.add(curCard);
         }
-
-        // TODO: 005 05.05.20 добавить опцию сортировки по разным критериям
-        //  по умолчанию сортируем сначала по возрастанию ранга, а потом по масти.
-        cards.sort(Comparator.comparing(card -> ((Card) card).getRank().ordinal())
-                         .thenComparing(card -> ((Card) card).getSuit()));
 
         return cards;
 
