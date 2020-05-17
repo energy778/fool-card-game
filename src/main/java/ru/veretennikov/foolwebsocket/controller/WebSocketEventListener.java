@@ -39,19 +39,22 @@ public class WebSocketEventListener {
 
         if (userId != null) {
 
+            boolean gameWasStarted = gameService.isGameStarted();
+
             String username = gameService.removeUser(userId);
             log.info("User Disconnected : " + username);
 
             ServerChatMessage chatMessage = new ServerChatMessage();
             chatMessage.setType(LEAVE);
             chatMessage.setSender(username);
-
             messagingTemplate.convertAndSend("/topic/events", chatMessage);
 
-            ClientChatMessage clientChatMessage = new ClientChatMessage();
-            clientChatMessage.setSender(username);
-//            clientChatMessage.setType(LEAVE);
-            sendService.sendMessages(clientChatMessage, GAME_MESSAGE, gameService.getContent(userId));
+            if (gameWasStarted){
+                ClientChatMessage clientChatMessage = new ClientChatMessage();
+                clientChatMessage.setSender(username);
+//                clientChatMessage.setType(LEAVE);
+                sendService.sendMessages(clientChatMessage, GAME_MESSAGE, gameService.getContent(userId));
+            }
 
         }
 

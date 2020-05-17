@@ -313,7 +313,6 @@ public class DurakGameServiceImpl implements GameService {
             } else {
 //                Игра завершена
 
-                // TODO: 015 15.05.20 игра не может быть завершена несколько раз - исправить
                 DurakPublicCurrentGameContent endContent = new DurakPublicCurrentGameContent();
                 endContent.setGameEvent(curEvent);
                 if (curPlayer == null)
