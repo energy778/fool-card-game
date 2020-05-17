@@ -65,8 +65,8 @@ public class DurakGameServiceImpl implements GameService {
         User user = users.remove(userId);
         String username = user.getName();
 
-        System.out.println(String.format("%s вышел из игры", username));
-        System.out.println(String.format("Список всех игроков: %s", users));        // отладить редкий баг: java.util.ConcurrentModificationException: null
+        logger.debug(String.format("%s вышел из игры", username));
+        logger.debug(String.format("Список всех игроков: %s", users));        // отладить редкий баг: java.util.ConcurrentModificationException: null
 
         if (PLAYER.equals(user.getRole())){
             curEvent = USER_OUT;
@@ -103,7 +103,7 @@ public class DurakGameServiceImpl implements GameService {
     @Override
     public void checkCommand(String message, String userId) {
 
-        log.debug(String.format("Incoming message. id: %s, message: %s", userId, message));
+        logger.debug(String.format("Incoming message. id: %s, message: %s", userId, message));
 
         curEvent = NO_GAME;
         this.curCard = null;
@@ -450,7 +450,7 @@ public class DurakGameServiceImpl implements GameService {
     private void processingStep(String userId, User initiator, int index, Pair openPair) {
 
         curWinner = null;
-        System.out.println(curEvent);
+        logger.debug(curEvent.toString());
         if (index != 0)
             this.curCard = initiator.getCards().get(index - 1);
 
