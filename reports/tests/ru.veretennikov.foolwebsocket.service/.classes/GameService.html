@@ -1,0 +1,64 @@
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html id="htmlId">
+<head>
+  <title>Coverage Report :: GameService</title>
+  <style type="text/css">
+    @import "../../.css/coverage.css";
+  </style>
+</head>
+
+<body>
+<div class="header"></div>
+
+<div class="content">
+<div class="breadCrumbs">
+    [ <a href="../../index.html">all classes</a> ]
+    [ <a href="../index.html">ru.veretennikov.foolwebsocket.service</a> ]
+</div>
+
+<h1>Coverage Summary for Class: GameService (ru.veretennikov.foolwebsocket.service)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">GameService</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<div class="sourceCode"><i>1</i>&nbsp;package ru.veretennikov.foolwebsocket.service;
+<i>2</i>&nbsp;
+<i>3</i>&nbsp;import ru.veretennikov.foolwebsocket.model.GameContent;
+<i>4</i>&nbsp;
+<i>5</i>&nbsp;import java.util.List;
+<i>6</i>&nbsp;
+<i>7</i>&nbsp;public interface GameService {
+<i>8</i>&nbsp;
+<i>9</i>&nbsp;    void addUser(String username, String userId);
+<i>10</i>&nbsp;    String removeUser(String username);
+<i>11</i>&nbsp;
+<i>12</i>&nbsp;    boolean isGameStarted();
+<i>13</i>&nbsp;    void startGame(String sessionId);
+<i>14</i>&nbsp;    void checkCommand(String content, String userId);
+<i>15</i>&nbsp;    List&lt;GameContent&gt; getContent(String userId);
+<i>16</i>&nbsp;
+<i>17</i>&nbsp;}
+</div>
+</div>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2020-05-17 03:04</div>
+</div>
+</body>
+</html>

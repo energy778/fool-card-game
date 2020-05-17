@@ -41,7 +41,6 @@ public class CardDeck {
             if (this.isEmpty())
                 break;
             Card curCard = this.pop();
-            curCard.setTrump(curCard.getSuit() == trumpSuit);
             cards.add(curCard);
         }
 
@@ -56,6 +55,7 @@ public class CardDeck {
         cards.addLast(trump);
         this.trump = trump;
         this.trumpSuit = trump.getSuit();
+//        устанавливаем "козырь" остальным картам колоды в том же месте, где его объявили
         cards.forEach(card -> card.setTrump(card.getSuit() == this.trumpSuit));
     }
 

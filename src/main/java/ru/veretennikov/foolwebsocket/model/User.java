@@ -33,7 +33,7 @@ public class User {
                 '}';
     }
 
-//    добираем из колоды
+//    добираем из колоды и укладываем в отсортированном порядке
     public void pickCards(CardDeck cardDeck, int maxNumCardOnHand) {
         int need = Math.min(cardDeck.size(), maxNumCardOnHand - hand.getCards().size());
         this.hand.getCards().addAll(cardDeck.getSomeCards(need));
@@ -42,7 +42,7 @@ public class User {
                                         .thenComparing(card -> ((Card) card).getSuit()));
     }
 
-//    берём с поля все карты
+//    берём с поля все карты и укладываем в отсортированном порядке
     public void pickCards(List<Card> cards) {
         this.hand.getCards().addAll(cards);
         this.hand.getCards().sort(Comparator.comparing(card -> (((Card) card).isTrump()))
