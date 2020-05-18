@@ -27,7 +27,7 @@ public class WebSocketEventListener {
 
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectedEvent event) {
-        log.info("Received a new web socket connection. Session id: {}", StompHeaderAccessor.wrap(event.getMessage()).getSessionId());
+        logger.info("Received a new web socket connection. Session id: {}", StompHeaderAccessor.wrap(event.getMessage()).getSessionId());
     }
 
     @EventListener
@@ -42,7 +42,7 @@ public class WebSocketEventListener {
             boolean gameWasStarted = gameService.isGameStarted();
 
             String username = gameService.removeUser(userId);
-            log.info("User Disconnected : " + username);
+//            logger.info("User Disconnected : " + username);
 
             ServerChatMessage chatMessage = new ServerChatMessage();
             chatMessage.setType(LEAVE);

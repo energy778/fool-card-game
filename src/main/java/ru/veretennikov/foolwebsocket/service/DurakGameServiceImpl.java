@@ -2,6 +2,8 @@ package ru.veretennikov.foolwebsocket.service;
 
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import ru.veretennikov.foolwebsocket.common.util.CardDeckGenerator;
 import ru.veretennikov.foolwebsocket.exception.DurakGameException;
@@ -22,6 +24,8 @@ import static ru.veretennikov.foolwebsocket.model.UserRole.PLAYER;
 @NoArgsConstructor
 public class DurakGameServiceImpl implements GameService {
 
+    private final Locale locale = new Locale("ru", "RU");
+
     private final int MAX_NUM_CARD_IN_HAND = 6;
     private final int MAX_NUM_CARD_ON_FIELD = 6;
 
@@ -30,6 +34,8 @@ public class DurakGameServiceImpl implements GameService {
 
     private final List<Rank> ranks = Arrays.asList(SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE);
     private final Map<String, User> users = new HashMap();
+
+    private MessageSource messageSource;
 
     private boolean gameStarted;
     private boolean roundBegun;
@@ -47,6 +53,11 @@ public class DurakGameServiceImpl implements GameService {
     private User curDefender;
     private User curSubattacker;
 
+    @Autowired
+    public DurakGameServiceImpl(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
+
     @Override
     public void addUser(String username, String userId) {
 
@@ -54,8 +65,8 @@ public class DurakGameServiceImpl implements GameService {
         newUser.setRole(GUEST);
         users.put(userId, newUser);
 
-        System.out.println(String.format("%s вошел в игру", username));
-        System.out.println(String.format("Список всех игроков: %s", users));
+        logger.debug(messageSource.getMessage("game.add-user", new Object[] {username}, locale));
+        logger.debug(messageSource.getMessage("game.user-list", new Object[] {users}, locale));
 
     }
 
@@ -65,8 +76,8 @@ public class DurakGameServiceImpl implements GameService {
         User user = users.remove(userId);
         String username = user.getName();
 
-        System.out.println(String.format("%s вышел из игры", username));
-        System.out.println(String.format("Список всех игроков: %s", users));        // отладить редкий баг: java.util.ConcurrentModificationException: null
+        logger.debug(messageSource.getMessage("game.remove-user", new Object[] {username}, locale));
+        logger.debug(messageSource.getMessage("game.user-list", new Object[] {users}, locale));
 
         if (PLAYER.equals(user.getRole())){
             curEvent = USER_OUT;
@@ -103,7 +114,7 @@ public class DurakGameServiceImpl implements GameService {
     @Override
     public void checkCommand(String message, String userId) {
 
-        log.debug(String.format("Incoming message. id: %s, message: %s", userId, message));
+        logger.debug(messageSource.getMessage("game.income-message", new Object[]{userId, message}, locale));
 
         curEvent = NO_GAME;
         this.curCard = null;
@@ -450,7 +461,8 @@ public class DurakGameServiceImpl implements GameService {
     private void processingStep(String userId, User initiator, int index, Pair openPair) {
 
         curWinner = null;
-        System.out.println(curEvent);
+        logger.debug(messageSource.getMessage("game.processing-step-current-event", new Object[]{curEvent}, locale));
+
         if (index != 0)
             this.curCard = initiator.getCards().get(index - 1);
 

@@ -1,14 +1,21 @@
 package ru.veretennikov.foolwebsocket.service;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import ru.veretennikov.foolwebsocket.exception.DurakGameException;
 import ru.veretennikov.foolwebsocket.exception.DurakGamePrivateException;
 import ru.veretennikov.foolwebsocket.model.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -18,14 +25,18 @@ import static ru.veretennikov.foolwebsocket.model.Rank.*;
 import static ru.veretennikov.foolwebsocket.model.UserRole.GUEST;
 import static ru.veretennikov.foolwebsocket.model.UserRole.PLAYER;
 
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes = { DurakGameServiceImpl.class })
 class DurakGameServiceImplTest {
 
+    @Autowired
+    private MessageSource messageSource;
     private DurakGameServiceImpl gameService;
 
     @BeforeEach
     public void init(){
 
-        gameService = new DurakGameServiceImpl();
+        gameService = new DurakGameServiceImpl(messageSource);
 
 //        Map<String, User> users = (Map<String, User>) ReflectionTestUtils.getField(gameService, "users");
 //        assertNotNull(users);
@@ -100,7 +111,7 @@ class DurakGameServiceImplTest {
     @Test
     void startGame() {
 
-        gameService = new DurakGameServiceImpl();
+        gameService = new DurakGameServiceImpl(messageSource);
         assertThrows(DurakGamePrivateException.class, () -> gameService.startGame("1"));
 
         Map<String, User> users = (Map<String, User>) ReflectionTestUtils.getField(gameService, "users");
@@ -163,7 +174,7 @@ class DurakGameServiceImplTest {
     @Test
     void checkCommandWithExceptions() {
 
-        gameService = new DurakGameServiceImpl();
+        gameService = new DurakGameServiceImpl(messageSource);
         ReflectionTestUtils.setField(gameService, "gameStarted", true);
 
         Map<String, User> users = (Map<String, User>) ReflectionTestUtils.getField(gameService, "users");
