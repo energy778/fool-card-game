@@ -6,6 +6,14 @@ logging:
   file:
     name: out/log.txt
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  server:
+    port: 8090
+
 application:
   greetings:
     - '%s присоединяется к вашей пати'
