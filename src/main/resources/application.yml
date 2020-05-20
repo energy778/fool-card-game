@@ -1,3 +1,19 @@
+#server:
+#  port: 8082
+
+logging:
+  level.ru: DEBUG
+  file:
+    name: out/log.txt
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  server:
+    port: 8090
+
 application:
   greetings:
     - '%s присоединяется к вашей пати'
@@ -20,14 +36,3 @@ application:
     - 'Рады встрече, %s'
     - 'Знакомьтесь, это %s'
     - 'Привет, %s поздоровайся со всеми'
-
-logging:
-  level.ru: DEBUG
-  file:
-    name: out/log.txt
-
-#spring:
-#  messages:
-#    encoding: windows-1251
-#    basename: i18n/messages
-#аналог - через бин в AppConfig-е, взлетает даже с одной локалью
