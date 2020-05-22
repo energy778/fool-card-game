@@ -101,7 +101,7 @@ public class DurakGameServiceImpl implements GameService {
     public void startGame(String userId) {
 
         if (users.size() < MIN_NUM_PLAYERS) {
-            throw new DurakGamePrivateException("Минимальное количество игроков для игры - 2. Игра против компьютера пока не поддерживается", userId);
+            throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message1", null, locale), userId);
         }
 
         initGame(userId);
@@ -122,27 +122,27 @@ public class DurakGameServiceImpl implements GameService {
 
         User initiator = users.get(userId);
         if (initiator == null)
-            throw new DurakGameException("Не удалось идентифицировать пользователя, приславшего сообщение");
+            throw new DurakGameException(messageSource.getMessage("game.exception.common.message11", null, locale));
         if (!PLAYER.equals(initiator.getRole()))
-            throw new DurakGamePrivateException("В данный момент игра уже идёт. Дождитесь ее окончания и присоединяйтесь к новой игре. Спасибо", userId);
+            throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message18", null, locale), userId);
 
         PlayerType initiatorPlayerType = initiator.getPlayerType();
         if (FINISHER.equals(initiatorPlayerType))
-            throw new DurakGamePrivateException("Вы не можете сделать ход, так как закончили игру. Дождитесь ее окончания и присоединяйтесь к новой", userId);
+            throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message17", null, locale), userId);
         if (OBSERVER.equals(initiatorPlayerType)
                 || DEFENDER.equals(initiatorPlayerType) && !curPlayer.equals(curDefender)
                 || SUBATTACKER.equals(initiatorPlayerType) && initiator.equals(curSubattacker) && !roundBegun)
 //                || ATTACKER.equals(initiatorPlayerType) && !curPlayer.equals(curAttacker)      // комм.: атакующий может подкидывать и далее
-            throw new DurakGamePrivateException("Вы не можете сделать ход, дождитесь своей очереди", userId);
+            throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message16", null, locale), userId);
 
         int index;
 
         try {
             index = Integer.parseInt(message);
             if (index < 0)
-                throw new DurakGamePrivateException("Некорректный ввод. Введено отрицательное число", userId);
+                throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message15", null, locale), userId);
         } catch (NumberFormatException e) {
-            throw new DurakGamePrivateException("Некорректный ввод. Введите порядковый номер карты, начиная с 1 или 0 (опционально)", userId);
+            throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message14", null, locale), userId);
         }
 
         Pair curOpenPair = null;
@@ -151,7 +151,7 @@ public class DurakGameServiceImpl implements GameService {
 //            пытаемся подкинуть карты
 
             if (index == 0)
-                throw new DurakGamePrivateException("Некорректный ввод. Подкидывающий может только подкидывать карты. Введите порядковый номер карты, начиная с 1", userId);
+                throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message13", null, locale), userId);
 
             checkSubattack(userId, initiator, index);
             curEvent = SUBATT_STEP;
@@ -164,7 +164,7 @@ public class DurakGameServiceImpl implements GameService {
                 if (index == 0){
 
                     if (field.getOpenPairs().size() != 0)
-                        throw new DurakGamePrivateException("Вы не можете завершить раунд, на поле еще есть открытые пары", userId);
+                        throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message12", null, locale), userId);
 
                     curEvent = DEF_PASS;
 
@@ -178,9 +178,9 @@ public class DurakGameServiceImpl implements GameService {
             } else {
 
                 if (index > initiator.getCards().size())
-                    throw new DurakGamePrivateException("Некорректный ввод. Введите порядковый номер карты, начиная с 1", userId);
+                    throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message11", null, locale), userId);
                 if (index == 0)
-                    throw new DurakGamePrivateException("Вы не можете пасовать в начале атаки. Введите порядковый номер карты, начиная с 1", userId);
+                    throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message10", null, locale), userId);
 
                 curEvent = ATT_STEP;
 
@@ -191,7 +191,7 @@ public class DurakGameServiceImpl implements GameService {
 
             List<Pair> openPairs = field.getOpenPairs();
             if (openPairs.size() == 0)
-                throw new DurakGamePrivateException("На поле нет открытых пар. Сейчас ход атаки", userId);  // никогда не ожидаемо
+                throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message9", null, locale), userId); // никогда не ожидаемо
 
             if (index == 0){
 
@@ -201,7 +201,7 @@ public class DurakGameServiceImpl implements GameService {
 //                отбиваемся
 
                 if (index > initiator.getCards().size())
-                    throw new DurakGamePrivateException("Некорректный ввод. Введите порядковый номер карты, начиная с 1", userId);
+                    throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message8", null, locale), userId);
 
                 Card cardDefender = initiator.getCards().get(index - 1);
                 boolean step = false;
@@ -219,14 +219,14 @@ public class DurakGameServiceImpl implements GameService {
                 }
 
                 if (!step)
-                    throw new DurakGamePrivateException("Вы не можете отбить выбранной картой ни одну карту на поле. Введите порядковый номер карты, начиная с 1 или 0 для получения карт с поля", userId);
+                    throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message7", null, locale), userId);
 
                 curEvent = DEF_STEP;
 
             }
 
         } else {
-            throw new DurakGameException(String.format("Не удалось идентифицировать пользователя, приславшего сообщение: %s", initiator));
+            throw new DurakGameException(messageSource.getMessage("game.exception.common.message10", new Object[]{initiator}, locale));
 
         }
 
@@ -252,7 +252,7 @@ public class DurakGameServiceImpl implements GameService {
             publicContent = new DurakPublicStartGameContent();
             publicContent.setGameEvent(ANNOUNCE_REASON_CARD);
             publicContent.setReasonCard(reasonCard);
-            publicContent.setGameMessage("Карта, определившая первый ход: ");
+            publicContent.setGameMessage(messageSource.getMessage("game.cardFirstStep", null, locale));
             content.add(publicContent);
 
 //            приват. карты игроков
@@ -296,14 +296,14 @@ public class DurakGameServiceImpl implements GameService {
                     publicContentAfter.setGameEvent(curEvent);
                     String eventString;
                     if (DEF_PASS.equals(curEvent))
-                        eventString = "бито";
+                        eventString = messageSource.getMessage("game.roundEvent.n1", null, locale);
                     else if (DEF_FALL.equals(curEvent))
-                        eventString = "защита взяла карты";
+                        eventString = messageSource.getMessage("game.roundEvent.n2", null, locale);
                     else if (DEF_STEP.equals(curEvent))
-                        eventString = "защита вышла из игры";
+                        eventString = messageSource.getMessage("game.roundEvent.n3", null, locale);
                     else
-                        throw new DurakGameException(String.format("Не удалось определить текстовое представление события окончания раунда: %s", curEvent));
-                    publicContentAfter.setGameMessage(String.format("Раунд завершён: %s. ", eventString));
+                        throw new DurakGameException(messageSource.getMessage("game.exception.common.message9", new Object[]{curEvent}, locale));
+                    publicContentAfter.setGameMessage(messageSource.getMessage("game.roundEnd", new Object[]{eventString}, locale));
                     content.add(publicContentAfter);
 
 //                    инфа о новом раунде
@@ -327,11 +327,11 @@ public class DurakGameServiceImpl implements GameService {
                 DurakPublicCurrentGameContent endContent = new DurakPublicCurrentGameContent();
                 endContent.setGameEvent(curEvent);
                 if (curPlayer == null)
-                    endContent.setGameMessage("Игра завершена, ничья");
+                    endContent.setGameMessage(messageSource.getMessage("game.event.n3", null, locale));
                 else if (USER_OUT.equals(curEvent))
-                    endContent.setGameMessage(String.format("Игра завершена, %s сдался", curPlayer.getName()));
+                    endContent.setGameMessage(messageSource.getMessage("game.event.n1", new Object[]{curPlayer.getName()}, locale));
                 else
-                    endContent.setGameMessage(String.format("Игра завершена, проиграл %s", curPlayer.getName()));
+                    endContent.setGameMessage(messageSource.getMessage("game.event.n2", new Object[]{curPlayer.getName()}, locale));
                 content.add(endContent);
 
             }
@@ -400,11 +400,13 @@ public class DurakGameServiceImpl implements GameService {
                     if (card2.isTrump())
                         return card2;
                     return card.getRank().ordinal() < card2.getRank().ordinal() ? card : card2;
-                }).orElseThrow(() -> new DurakGameException("Ошибка жеребьёвки: не удалось определить карту, определяющую первый ход"));
+                })
+                .orElseThrow(() -> new DurakGameException(messageSource.getMessage("game.exception.common.message8", null, locale)));
 
         curAttacker = users.values().stream()
                 .filter(user -> user.getCards().contains(reasonCard))
-                .findFirst().orElseThrow(() -> new DurakGameException("Ошибка жеребьёвки: не удалось определить принадлежность карты, определяющей первый ход"));
+                .findFirst()
+                .orElseThrow(() -> new DurakGameException(messageSource.getMessage("game.exception.common.message7", null, locale)));
 
         curAttacker.setPlayerType(ATTACKER);
         curPlayer = curAttacker;
@@ -424,13 +426,13 @@ public class DurakGameServiceImpl implements GameService {
         if (users.values().stream()
                 .filter(user -> ATTACKER.equals(user.getPlayerType()))
                 .count() != 1)
-            throw new DurakGameException("Классификация игроков невозможна. Должен быть всего лишь один атакующий игрок");
+            throw new DurakGameException(messageSource.getMessage("game.exception.common.message6", null, locale));
 
         if (users.values().stream().anyMatch(user -> PLAYER.equals(user.getRole())
                 && !ATTACKER.equals(user.getPlayerType())
                 && !FINISHER.equals(user.getPlayerType())
                 && user.getPlayerType() != null))
-            throw new DurakGameException("Классификация игроков невозможна. Типы всех игроков, кроме атакующего и завершивших игру, должны быть очищены");
+            throw new DurakGameException(messageSource.getMessage("game.exception.common.message5", null, locale));
 
         curDefender = playerIterator.peekNextX(1);
         curDefender.setPlayerType(DEFENDER);
@@ -485,7 +487,7 @@ public class DurakGameServiceImpl implements GameService {
 
             case DEF_STEP:
                 if (openPair == null)
-                    throw new DurakGamePrivateException("Не найдена открытая пара для отбивания карты", userId);        // никогда не ожидаема
+                    throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message6", null, locale), userId);
                 field.closePair(openPair, initiator.getCards().remove(index - 1));
                 curWinner = checkUserWin(curDefender);
                 if (curWinner != null) {
@@ -511,7 +513,7 @@ public class DurakGameServiceImpl implements GameService {
                 break;
 
             default:
-                throw new DurakGameException("Возникло необрабатываемое исключение: не определен тип события игры");
+                throw new DurakGameException(messageSource.getMessage("game.exception.common.message4", null, locale));
 
         }
 
@@ -571,16 +573,16 @@ public class DurakGameServiceImpl implements GameService {
     private void checkSubattack(String userId, User initiator, int index) {
 
         if (field.getPairs().size() > (MAX_NUM_CARD_ON_FIELD - 1))
-            throw new DurakGamePrivateException(String.format("Вы не можете сделать ход, допускается только %s пар на игровом поле", MAX_NUM_CARD_ON_FIELD), userId);
+            throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message5", new Object[]{MAX_NUM_CARD_ON_FIELD}, locale), userId);
 
         if (index > initiator.getCards().size())
-            throw new DurakGamePrivateException("Некорректный ввод. Введите порядковый номер карты, начиная с 1", userId);
+            throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message4", null, locale), userId);
 
         if (!field.getPlayedRanks().contains(initiator.getCards().get(index - 1).getRank()))
-            throw new DurakGamePrivateException("Вы не можете подкинуть карту, которой нет на игровом поле", userId);
+            throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message3", null, locale), userId);
 
         if ((Math.min(MAX_NUM_CARD_ON_FIELD, curDefender.getCards().size()) - field.getOpenPairs().size()) < 1)
-            throw new DurakGamePrivateException("Вы не можете подкинуть карту, так как у защищающегося игрока не хватит карт, чтобы отбиться", userId);
+            throw new DurakGamePrivateException(messageSource.getMessage("game.exception.private.message2", null, locale), userId);
 
     }
 
@@ -637,7 +639,9 @@ public class DurakGameServiceImpl implements GameService {
             return false;
 
         curPlayer = users.values().stream()
-                .filter(user -> !user.getCards().isEmpty()).findFirst().orElseThrow(() -> new DurakGameException("Не удается определить проигравшего"));
+                .filter(user -> !user.getCards().isEmpty())
+                .findFirst()
+                .orElseThrow(() -> new DurakGameException(messageSource.getMessage("game.exception.common.message3", null, locale)));
 
         return true;
 
@@ -663,28 +667,28 @@ public class DurakGameServiceImpl implements GameService {
 //        объявление игроков
         DurakPublicStartGameContent publicContent = new DurakPublicStartGameContent();
         publicContent.setGameEvent(ROUND_BEGIN);
-        StringBuilder sb = new StringBuilder("Раунд %s начался. ");
+        StringBuilder sb = new StringBuilder(messageSource.getMessage("game.raundBegin", null, locale));
         List<String> args = new ArrayList<>();
         args.add(String.valueOf(round));
         sb.append(System.lineSeparator());
         if (cardDeck.size() > 0){
-            sb.append("В колоде карт: %s. ");
+            sb.append(messageSource.getMessage("game.cartOstalos", null, locale));
             args.add(String.valueOf(cardDeck.size()));
         } else {
-            sb.append("В колоде не осталось карт. ");
+            sb.append(messageSource.getMessage("game.cartNeOstalos", null, locale));
         }
         sb.append(System.lineSeparator());
-        sb.append("Список участников: %s ");
+        sb.append(messageSource.getMessage("game.players", null, locale));
         args.add(playerIterator.getUsers());
         sb.append(System.lineSeparator());
-        sb.append("Ходит: %s. ");
+        sb.append(messageSource.getMessage("game.step", null, locale));
         args.add(curAttacker.getName());
         sb.append(System.lineSeparator());
-        sb.append("Защищается: %s. ");
+        sb.append(messageSource.getMessage("game.def", null, locale));
         args.add(curDefender.getName());
         if (curSubattacker != null) {
             sb.append(System.lineSeparator());
-            sb.append("Подкидывает: %s. ");
+            sb.append(messageSource.getMessage("game.sub", null, locale));
             args.add(curSubattacker.getName());
         }
         publicContent.setGameMessage(String.format(sb.toString(), args.toArray()));
@@ -694,7 +698,7 @@ public class DurakGameServiceImpl implements GameService {
         publicContent = new DurakPublicStartGameContent();
         publicContent.setGameEvent(ANNOUNCE_TRUMP);
         publicContent.setTrump(cardDeck.getTrump());
-        publicContent.setGameMessage("Козырная карта: ");
+        publicContent.setGameMessage(messageSource.getMessage("game.trump", null, locale));
         content.add(publicContent);
 
     }
@@ -706,7 +710,7 @@ public class DurakGameServiceImpl implements GameService {
 
         PrivateGameContent content = new PrivateGameContent();
         content.setUserId(userId);
-        content.setGameMessage("Ваши карты (эту строку видите только вы): ");
+        content.setGameMessage(messageSource.getMessage("game.yourCards", null, locale));
         content.setCards(users.get(userId).getCards());
         return content;
 
@@ -721,18 +725,18 @@ public class DurakGameServiceImpl implements GameService {
 
         privateStartGameContent = new PrivateGameContent();
         privateStartGameContent.setUserId(curPlayer.getId());
-        String gameMessage = "Ваш ход. Введите цифру от 1 до " + curPlayer.getCards().size();
+        String gameMessage = messageSource.getMessage("game.yourStep", new Object[]{curPlayer.getCards().size()}, locale);
         if (curPlayer == curAttacker)
-            gameMessage += " или 0 для паса";
+            gameMessage += messageSource.getMessage("game.orPass", null, locale);
         if (curPlayer == curDefender)
-            gameMessage += " или 0 для взятия карт";
+            gameMessage += messageSource.getMessage("game.orTake", null, locale);
         privateStartGameContent.setGameMessage(gameMessage);
         content.add(privateStartGameContent);
 
         if (roundBegun && curSubattacker != null){
             privateStartGameContent = new PrivateGameContent();
             privateStartGameContent.setUserId(curSubattacker.getId());
-            privateStartGameContent.setGameMessage("Вы можете подкинуть карту");
+            privateStartGameContent.setGameMessage(messageSource.getMessage("game.canSub", null, locale));
             content.add(privateStartGameContent);
         }
 
@@ -765,7 +769,7 @@ public class DurakGameServiceImpl implements GameService {
         public User next() {
 
             if (!this.hasNext())
-                throw new DurakGameException("Игра окончена. Остался один игрок с картами");
+                throw new DurakGameException(messageSource.getMessage("game.exception.common.message2", null, locale));
 
             while (true){
                 this.index = (this.index + 1) % this.users.size();
@@ -784,9 +788,7 @@ public class DurakGameServiceImpl implements GameService {
 
             long countPlayers = getCountPlayers();
             if (n > countPlayers)
-                throw new DurakGameException(String.format("В игре осталось игроков: %s. " +
-                        "Не может быть осуществлён выбор заданного числа ходов (%s)",
-                        countPlayers, n));
+                throw new DurakGameException(messageSource.getMessage("game.exception.common.message1", new Object[]{countPlayers, n}, locale));
 
             for (int i = 0; i < n; i++) {
                 this.next();
@@ -803,9 +805,7 @@ public class DurakGameServiceImpl implements GameService {
 
             long countPlayers = getCountPlayers();
             if (n > countPlayers)
-                throw new DurakGameException(String.format("В игре осталось игроков: %s. " +
-                                "Не может быть осуществлён выбор заданного числа ходов (%s)",
-                        countPlayers, n));
+                throw new DurakGameException(messageSource.getMessage("game.exception.common.message1", new Object[]{countPlayers, n}, locale));
 
             User user;
             int peekIndex = this.index;
