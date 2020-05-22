@@ -42,7 +42,6 @@ public class WebSocketEventListener {
             boolean gameWasStarted = gameService.isGameStarted();
 
             String username = gameService.removeUser(userId);
-//            logger.info("User Disconnected : " + username);
 
             ServerChatMessage chatMessage = new ServerChatMessage();
             chatMessage.setType(LEAVE);

@@ -8,6 +8,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import ru.veretennikov.foolwebsocket.TestAppConfig;
 import ru.veretennikov.foolwebsocket.exception.DurakGameException;
 import ru.veretennikov.foolwebsocket.exception.DurakGamePrivateException;
 import ru.veretennikov.foolwebsocket.model.*;
@@ -26,7 +27,7 @@ import static ru.veretennikov.foolwebsocket.model.UserRole.GUEST;
 import static ru.veretennikov.foolwebsocket.model.UserRole.PLAYER;
 
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = { DurakGameServiceImpl.class })
+@ContextConfiguration(classes = TestAppConfig.class)
 class DurakGameServiceImplTest {
 
     @Autowired
