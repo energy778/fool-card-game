@@ -1,18 +1,8 @@
-#server:
-#  port: 8082
 
 logging:
   level.ru: DEBUG
   file:
     name: out/log.txt
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"
-  server:
-    port: 8090
 
 application:
   greetings:
@@ -36,3 +26,5 @@ application:
     - 'Рады встрече, %s'
     - 'Знакомьтесь, это %s'
     - 'Привет, %s поздоровайся со всеми'
+    - '%s приземляется на сервере'
+    - '%s запрыгивает на сервер'

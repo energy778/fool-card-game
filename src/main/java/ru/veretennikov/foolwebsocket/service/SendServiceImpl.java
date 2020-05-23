@@ -57,7 +57,7 @@ public class SendServiceImpl implements SendService {
 
     private void buildSendPrivateMessage(PrivateGameContent gameContent, ClientChatMessage incomeMessage, ChatMessage.MessageType messageType) {
         GameServerChatMessage chatMessage = new GameServerChatMessage();
-        chatMessage.setSender(incomeMessage.getSender());         // TODO: 009 09.05.20 не всегда нужно знать, кто был инициатором. но пока оставим это на усмотрение фронта
+        chatMessage.setSender(incomeMessage.getSender());
         chatMessage.setType(messageType);
         chatMessage.setGameContent(gameContent);
 //        messagingTemplate.convertAndSendToUser(((PrivateGameContent) gameContent).getUserId(), "/topic/private/", chatMessage);     // не взлетает в разных вариациях, надоело бороться
