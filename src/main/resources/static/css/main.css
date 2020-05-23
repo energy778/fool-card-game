@@ -17,19 +17,46 @@ body {
     font-size: 1rem;
     line-height: 1.58;
     color: #333;
-    background-color: #f4f4f4;
+    background-color: #0082B4;
     height: 100%;
 }
 
 body:before {
-    height: 50%;
+    height: 35%;
     width: 100%;
     position: absolute;
     top: 0;
     left: 0;
-    background: #128ff2;
+    background: #f0ede5;
     content: "";
     z-index: 0;
+}
+
+body:after {
+    height: 35%;
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    background: #f0ede5;
+    content: "";
+    z-index: -1;
+}
+
+.github-corner:hover .octo-arm {animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}
+
+.github-corner > svg{
+    fill: #0082B4;
+    color: #f0ede5;
+    position: relative;
+    z-index: 1;
+}
+
+.version {
+    position: absolute;
+    right: 15px;
+    bottom: 5px;
+    font-size: 0.8rem
 }
 
 .clearfix:after {
@@ -108,22 +135,33 @@ button.accent {
     text-align: center;
 }
 
+#username-page .github {
+    position: absolute;
+    right: 5px;
+}
+
+#username-page .version {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+}
+
 .username-page-container {
-    background: #fff;
+    background: #f0ede5;
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.27);
     border-radius: 2px;
     width: 100%;
     max-width: 500px;
     display: inline-block;
     vertical-align: middle;
-    padding: 35px 55px 35px;
-    min-height: 250px;
+    padding: 0 55px 0;
+    min-height: 200px;
     position: absolute;
     top: 50%;
     left: 0;
     right: 0;
     margin: 0 auto;
-    margin-top: -160px;
+    margin-top: -100px;
 }
 
 .username-page-container .username-submit {
@@ -180,7 +218,13 @@ button.accent {
 }
 
 #chat-page .event-message p {
-    color: #777;
+    color: #7779;
+    font-size: 14px;
+    word-wrap: break-word;
+}
+
+#chat-page .event-message .error {
+    color: #f00;
     font-size: 14px;
     word-wrap: break-word;
 }
@@ -207,7 +251,7 @@ button.accent {
     text-transform: uppercase;
 }
 
-#chat-page .chat-message g-card {
+#chat-page .chat-message .g-card {
     width: 32px;
     height: 42px;
     overflow: hidden;
@@ -228,16 +272,17 @@ button.accent {
     position: relative;
 }
 
-#chat-page .chat-message g-card > div:first-child {
+#chat-page .chat-message .suit {
     position: absolute;
     font-size: 12px;
+}
+
+#chat-page .card-top {
     top: -14px;
     left: 2px;
 }
 
-#chat-page .chat-message g-card > div:last-child {
-    position: absolute;
-    font-size: 12px;
+#chat-page .card-bottom {
     bottom: -14px;
     right: 2px;
 }
@@ -249,6 +294,10 @@ button.accent {
 
 #chat-page .chat-message p {
     color: #43464b;
+}
+
+#chat-page .chat-message .cards {
+    margin-left: -50px;
 }
 
 #messageForm .input-group input {
@@ -265,11 +314,16 @@ button.accent {
 
 .chat-header {
     text-align: center;
-    padding: 15px;
-    border-bottom: 1px solid #ececec;
+    padding: 7px 15px 10px;
+    border-bottom: 1px solid #80808050;
 }
 
 .chat-header h2 {
+    margin: 0;
+    font-weight: 500;
+}
+
+.chat-header h5 {
     margin: 0;
     font-weight: 500;
 }

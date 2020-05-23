@@ -89,7 +89,7 @@ function sendMessage(event) {
 // общие ошибки приложения
 function onExceptionMessageReceived(payload) {
     // String
-    showMessageInChat(payload.body);
+    showMessageInChat(payload.body, true);
 }
 
 // события, связанные (пока) со входом/выходом пользователей
@@ -106,14 +106,14 @@ function onUserEvent(payload) {
         return;
     }
 
-    showMessageInChat(message.content);
+    showMessageInChat(message.content, false);
 
 }
 
 // ошибки, связанные с игрой
 function onGameExceptionMessageReceived(payload) {
     // String
-    showMessageInChat(payload.body);
+    showMessageInChat(payload.body, true);
 }
 
 // личные сообщения
@@ -267,12 +267,14 @@ function onMessageReceived(payload) {
 
 // service
 
-function showMessageInChat(message) {
+function showMessageInChat(message, isError) {
 
     let messageElement = document.createElement('li');
     messageElement.classList.add('event-message');
 
     let textElement = document.createElement('p');
+    if (isError === true)
+        textElement.classList.add('error');
     let messageText = document.createTextNode(message);
     textElement.appendChild(messageText);
     messageElement.appendChild(textElement);
@@ -300,15 +302,21 @@ function showCards(cards, messageElement) {
     if (cards === null)
         return;
 
+    let cardsContainer = document.createElement('div');
+    cardsContainer.classList.add('cards');
+
     for (let i = 0; i < cards.length; i++) {
 
         let card = cards[i];
         let suitIndex = card.suit;
         let suit = suits[suitIndex];
 
-        let cardElement = document.createElement('g-card');
+        let cardElement = document.createElement('div');
+        cardElement.classList.add('g-card');
 
         let cardElementText1 = document.createElement('div');
+        cardElementText1.classList.add('suit');
+        cardElementText1.classList.add('card-top');
         let cardText1 = document.createTextNode(suit);
         cardElementText1.appendChild(cardText1);
 
@@ -317,6 +325,8 @@ function showCards(cards, messageElement) {
         cardElementText2.appendChild(cardText2);
 
         let cardElementText3 = document.createElement('div');
+        cardElementText3.classList.add('suit');
+        cardElementText3.classList.add('card-bottom');
         let cardText3 = document.createTextNode(suit);
         cardElementText3.appendChild(cardText3);
 
@@ -329,13 +339,11 @@ function showCards(cards, messageElement) {
         cardElement.appendChild(cardElementText3);
 
         // контейнер для карт
-        let cElementContainer = document.createElement('span');
-        cElementContainer.appendChild(cardElement);
-        messageElement.appendChild(cElementContainer);
-
-        // TODO: можно сделать так, чтобы карты выводились на следующей строке после ника
+        cardsContainer.appendChild(cardElement);
 
     }
+
+    messageElement.appendChild(cardsContainer);
 
 }
 
